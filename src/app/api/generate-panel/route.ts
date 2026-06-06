@@ -18,19 +18,18 @@ const STYLE_PREFIXES: Record<string, string> = {
 };
 
 export async function POST(req: Request) {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const db = createServerClient();
 
-  // Check credits
   const { data: user } = await db.from('users').select('credits').eq('id', userId).single();
   if (!user || user.credits < CREDIT_COSTS.PANEL)
     return NextResponse.json({ error: 'Insufficient credits', credits: user?.credits ?? 0 }, { status: 402 });
 
   const { sceneId, visualPrompt, style, mood, panelType } = await req.json();
 
-  const stylePrefix = STYLE_PREFIXES[style?.toLowerCase()] ?? STYLE_PREFIXES.manga;
+  const stylePrefix = STYLE_PREFIXES[style?.toLowerCase()] ?? STYLE_PREFIXES.anime;
   const fullPrompt = `${stylePrefix} ${visualPrompt}, ${mood || 'dramatic'} mood, ${panelType || 'full-page'} composition, manga panel border, high quality illustration`;
 
   const response = await openai.images.generate({
@@ -39,19 +38,18 @@ export async function POST(req: Request) {
     size: '1024x1024',
     quality: 'hd',
     style: 'vivid',
+    n: 1,
   });
 
-  const imageUrl = response.data[0]?.url;
+  const imageUrl = response.data?.[0]?.url;
   if (!imageUrl) return NextResponse.json({ error: 'Generation failed' }, { status: 500 });
 
-  // Deduct credits
   await db.from('users').update({ credits: user.credits - CREDIT_COSTS.PANEL }).eq('id', userId);
   await db.from('credit_transactions').insert({
     user_id: userId, amount: -CREDIT_COSTS.PANEL,
     type: 'panel_generation', description: `Panel generated: ${(visualPrompt ?? '').slice(0, 60)}`,
   });
 
-  // Save panel URL to scene
   if (sceneId) {
     await db.from('scenes').update({ panel_url: imageUrl }).eq('id', sceneId).eq('user_id', userId);
   }

@@ -3,11 +3,10 @@ import { createServerClient } from '@/lib/supabase';
 import { CREDIT_COSTS } from '@/lib/credits';
 import { NextResponse } from 'next/server';
 
-// Uses Replicate's AnimateDiff or WanVideo model for anime clips
 const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
 
 export async function POST(req: Request) {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!REPLICATE_TOKEN) return NextResponse.json({ error: 'Video generation not configured. Add REPLICATE_API_TOKEN to your environment.' }, { status: 503 });
 
@@ -17,10 +16,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Insufficient credits', credits: user?.credits ?? 0 }, { status: 402 });
 
   const { sceneId, visualPrompt, style, panelUrl } = await req.json();
+  void sceneId;
 
   const prompt = `${style || 'anime'} style, ${visualPrompt}, fluid motion, cinematic camera movement, 5 seconds, high quality anime video`;
 
-  // Start Replicate prediction (wan-video or animatediff-lightning)
   const startRes = await fetch('https://api.replicate.com/v1/models/wan-ai/wan-2.1-t2v-480p/predictions', {
     method: 'POST',
     headers: { Authorization: `Bearer ${REPLICATE_TOKEN}`, 'Content-Type': 'application/json' },
@@ -28,7 +27,7 @@ export async function POST(req: Request) {
       input: {
         prompt: prompt.slice(0, 500),
         negative_prompt: 'blurry, low quality, static, watermark',
-        num_frames: 120, // ~5s at 24fps
+        num_frames: 120,
         guidance_scale: 7.5,
         ...(panelUrl ? { image: panelUrl } : {}),
       },
@@ -40,9 +39,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Video service error: ${err}` }, { status: 500 });
   }
 
-  const prediction = await startRes.json();
+  const prediction = await startRes.json() as { id: string; status: string };
 
-  // Deduct credits immediately
   await db.from('users').update({ credits: user.credits - CREDIT_COSTS.CLIP }).eq('id', userId);
   await db.from('credit_transactions').insert({
     user_id: userId, amount: -CREDIT_COSTS.CLIP,
@@ -57,9 +55,8 @@ export async function POST(req: Request) {
   });
 }
 
-// Poll for completion
 export async function GET(req: Request) {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
@@ -69,7 +66,7 @@ export async function GET(req: Request) {
   const pollRes = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
     headers: { Authorization: `Bearer ${REPLICATE_TOKEN}` },
   });
-  const data = await pollRes.json();
+  const data = await pollRes.json() as { status: string; output: unknown; error?: string };
 
   const clipUrl = Array.isArray(data.output) ? data.output[0] : (data.output ?? null);
   return NextResponse.json({ status: data.status, clipUrl, error: data.error });

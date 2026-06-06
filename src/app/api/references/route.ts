@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 export async function GET() {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const db = createServerClient();
   const { data } = await db.from('references').select('*').eq('user_id', userId).order('created_at', { ascending: false });
@@ -14,7 +14,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const db = createServerClient();
@@ -28,12 +28,11 @@ export async function POST(req: Request) {
   let fileUrl: string | null = null;
 
   if (file) {
-    // Upload to Supabase Storage
     const ext = file.name.split('.').pop();
     const path = `${userId}/${Date.now()}.${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    const { data: uploadData, error: uploadError } = await db.storage
+    const { error: uploadError } = await db.storage
       .from('references')
       .upload(path, buffer, { contentType: file.type, upsert: false });
 
@@ -42,7 +41,6 @@ export async function POST(req: Request) {
     const { data: urlData } = db.storage.from('references').getPublicUrl(path);
     fileUrl = urlData.publicUrl;
 
-    // Extract text from PDF
     if (type === 'pdf') {
       try {
         const pdfParse = (await import('pdf-parse')).default;
@@ -67,7 +65,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');

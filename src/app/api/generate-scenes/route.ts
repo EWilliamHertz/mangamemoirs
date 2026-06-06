@@ -5,7 +5,7 @@ import OpenAI from 'openai';
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: Request) {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { story, style, mood, referenceContext } = await req.json();
@@ -39,8 +39,8 @@ Overall mood target: ${mood || 'dramatic'}`;
   });
 
   const content = response.choices[0].message.content ?? '{"scenes":[]}';
-  const parsed = JSON.parse(content);
-  const scenes = Array.isArray(parsed) ? parsed : (parsed.scenes ?? []);
+  const parsed = JSON.parse(content) as Record<string, unknown>;
+  const scenes = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.scenes) ? parsed.scenes : []);
 
   return NextResponse.json({ scenes });
 }
