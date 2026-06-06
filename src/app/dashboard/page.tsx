@@ -82,7 +82,7 @@ function PricingModal({ onClose }: { onClose: () => void }) {
             </button>
           ))}
         </div>
-        <p className="text-center text-white/30 text-xs mt-6">Secure payments via Stripe · Credits never expire</p>
+        <p className="text-center text-white/30 text-xs mt-6">Secure payments via Lemon Squeezy · Credits never expire</p>
       </div>
     </div>
   );

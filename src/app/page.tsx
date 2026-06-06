@@ -256,7 +256,7 @@ export default function LandingPage() {
             ))}
           </div>
           <p className="text-center text-white/30 text-sm mt-8">
-            Credits never expire · Secure payments via Stripe · Cancel anytime
+            Credits never expire · Secure payments via Lemon Squeezy · Cancel anytime
           </p>
         </div>
       </section>
