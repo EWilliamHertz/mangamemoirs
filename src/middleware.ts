@@ -1,3 +1,3 @@
-export default function middleware() {
-  // Minimal middleware - no Clerk, no config
-}
+import { clerkMiddleware } from '@clerk/nextjs/server';
+
+export default clerkMiddleware();
