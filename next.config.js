@@ -8,7 +8,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'img.clerk.com' },
     ],
   },
-  serverExternalPackages: ['pdf-parse'],
+  serverExternalPackages: ['pdf-parse', 'svix'],
 };
 
 module.exports = nextConfig;

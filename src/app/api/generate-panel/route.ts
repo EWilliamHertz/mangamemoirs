@@ -4,7 +4,11 @@ import { CREDIT_COSTS } from '@/lib/credits';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _openai: OpenAI | null = null;
+function getOpenAI() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+  return _openai;
+}
 
 const STYLE_PREFIXES: Record<string, string> = {
   shonen:    'shonen manga panel, dynamic action lines, bold ink, high energy, Toriyama/Kishimoto style,',
@@ -32,7 +36,7 @@ export async function POST(req: Request) {
   const stylePrefix = STYLE_PREFIXES[style?.toLowerCase()] ?? STYLE_PREFIXES.anime;
   const fullPrompt = `${stylePrefix} ${visualPrompt}, ${mood || 'dramatic'} mood, ${panelType || 'full-page'} composition, manga panel border, high quality illustration`;
 
-  const response = await openai.images.generate({
+  const response = await getOpenAI().images.generate({
     model: 'dall-e-3',
     prompt: fullPrompt.slice(0, 4000),
     size: '1024x1024',
