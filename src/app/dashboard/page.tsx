@@ -49,10 +49,7 @@ function PricingModal({ onClose }: { onClose: () => void }) {
   async function buy(pack: string) {
     setLoading(pack);
     try {
-      const res = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pack }) });
-      const { url, error } = await res.json();
-      if (error) alert(error);
-      else window.location.href = url;
+      window.location.href = `mailto:ewilliamhe@gmail.com?subject=Ouriye Credits - ${pack}&body=Hi! I'd like to top up credits. My account email is: `;
     } finally { setLoading(null); }
   }
 
@@ -82,7 +79,7 @@ function PricingModal({ onClose }: { onClose: () => void }) {
             </button>
           ))}
         </div>
-        <p className="text-center text-white/30 text-xs mt-6">Secure payments via Lemon Squeezy · Credits never expire</p>
+        <p className="text-center text-white/30 text-xs mt-6">Email to top up · Credits never expire · ewilliamhe@gmail.com</p>
       </div>
     </div>
   );
@@ -423,7 +420,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-ink text-white flex flex-col">
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-6 py-3 bg-void border-b border-white/5 shrink-0">
-        <a href="/" className="text-lg font-black gradient-text">⛩ MangaMemoirs</a>
+        <a href="/" className="text-lg font-black gradient-text">🎴 Ouriye</a>
         <div className="flex items-center gap-3">
           <CreditBadge credits={credits} onBuy={() => setShowPricing(true)} />
           <UserButton afterSignOutUrl="/" appearance={{ variables: { colorBackground: '#0f0f1c' } }} />

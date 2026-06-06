@@ -40,7 +40,7 @@ const PRICING = [
     color: 'border-plasma/50',
     badge: 'Most Popular',
     perks: ['75 credits', '37 manga panels OR', '15 anime clips (5s)', 'All art styles', 'Unlimited references', 'Priority generation'],
-    cta: 'Buy Creator',
+    cta: 'Get Creator',
     href: '/sign-up',
   },
   {
@@ -50,7 +50,7 @@ const PRICING = [
     color: 'border-bloom/50',
     badge: 'Best Value',
     perks: ['250 credits', '125 panels OR', '50 anime clips (5s)', 'Commercial license', 'API access (soon)', 'Dedicated support'],
-    cta: 'Buy Studio',
+    cta: 'Get Studio',
     href: '/sign-up',
   },
 ];
@@ -66,7 +66,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-ink text-white overflow-x-hidden">
       {/* ── Nav ── */}
       <nav className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-6 py-4 bg-ink/80 backdrop-blur-xl border-b border-white/5">
-        <span className="text-xl font-bold gradient-text">⛩ MangaMemoirs</span>
+        <span className="text-xl font-bold gradient-text">🎴 Ouriye</span>
         <div className="flex items-center gap-3">
           <Link href="/sign-in" className="text-sm text-white/60 hover:text-white transition-colors px-4 py-2">
             Sign In
@@ -256,7 +256,7 @@ export default function LandingPage() {
             ))}
           </div>
           <p className="text-center text-white/30 text-sm mt-8">
-            Credits never expire · Secure payments via Lemon Squeezy · Cancel anytime
+            Credits never expire · Email ewilliamhe@gmail.com to top up · No subscription
           </p>
         </div>
       </section>
@@ -287,13 +287,13 @@ export default function LandingPage() {
 
       {/* ── Footer ── */}
       <footer className="border-t border-white/5 py-10 px-6 text-center text-white/30 text-sm">
-        <p className="text-xl font-bold gradient-text mb-4">⛩ MangaMemoirs</p>
+        <p className="text-xl font-bold gradient-text mb-4">🎴 Ouriye</p>
         <div className="flex items-center justify-center gap-6 mb-4">
           <a href="#" className="hover:text-white/60 transition-colors">Privacy</a>
           <a href="#" className="hover:text-white/60 transition-colors">Terms</a>
           <a href="https://github.com/EWilliamHertz/mangamemoirs" className="hover:text-white/60 transition-colors">GitHub</a>
         </div>
-        <p>© 2026 MangaMemoirs. Built with AI, for storytellers.</p>
+        <p>© 2026 Ouriye. Built with AI, for storytellers.</p>
       </footer>
     </div>
   );

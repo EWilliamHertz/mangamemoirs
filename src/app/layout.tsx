@@ -6,11 +6,11 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'MangaMemoirs — Turn Your Story Into Manga & Anime',
+  title: 'Ouriye — Turn Your Story Into Manga & Anime',
   description: 'AI-powered manga and anime storyboard creator. Upload your memoir, PDF, or story and watch it come to life, panel by panel.',
-  keywords: ['manga creator', 'anime generator', 'AI manga', 'memoir manga', 'storyboard AI'],
+  keywords: ['manga creator', 'anime generator', 'AI manga', 'story anime', 'storyboard AI', 'Ouriye'],
   openGraph: {
-    title: 'MangaMemoirs',
+    title: 'Ouriye',
     description: 'Turn your memoirs and stories into stunning manga & anime storyboards with AI.',
     images: ['/og-image.png'],
   },
@@ -18,7 +18,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+    >
       <html lang="en">
         <body className={`${inter.variable} font-sans`}>{children}</body>
       </html>
