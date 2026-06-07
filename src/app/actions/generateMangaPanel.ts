@@ -4,9 +4,12 @@ import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 
 export interface MangaPanelInput {
-  prompt: string;
-  isColored?: boolean;
-  aspectRatio?: 'portrait' | 'landscape' | 'square' | string;
+  prompt: string;
+  isColored?: boolean;
+  aspectRatio?: 'portrait' | 'landscape' | 'square' | string;
+  resolution?: string;
+  style?: string;
+  referenceImageUrls?: string[];
 }
 
 export interface MangaPanelResult {
