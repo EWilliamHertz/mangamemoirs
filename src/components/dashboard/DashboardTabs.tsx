@@ -30,16 +30,16 @@ export default function DashboardTabs({
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Tab Navigation */}
-      <div className="border-b border-gray-700 bg-gray-800 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 flex gap-8">
+      <div className="border-b border-gray-700 bg-gradient-to-b from-gray-800 to-gray-900 sticky top-0 z-10 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 flex gap-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-2 font-bold text-lg transition border-b-2 ${
+              className={`py-4 px-4 font-bold text-lg transition-all border-b-2 rounded-t-lg ${
                 activeTab === tab.id
-                  ? 'border-b-purple-500 text-purple-400'
-                  : 'border-b-transparent text-gray-400 hover:text-white'
+                  ? 'border-b-purple-500 text-purple-400 bg-purple-600/10'
+                  : 'border-b-transparent text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
               <span className="mr-2">{tab.icon}</span>
@@ -65,10 +65,12 @@ export default function DashboardTabs({
 
         {activeTab === 'editors' && (
           <div className="p-8">
-            <h2 className="text-2xl font-bold text-white mb-2">Creative Editors</h2>
-            <p className="text-gray-400 mb-8">
-              Arrange and polish your generated content into a final product.
-            </p>
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-white mb-2">🎨 Creative Editors</h2>
+              <p className="text-gray-400">
+                Arrange and polish your generated content into a finished masterpiece.
+              </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
               {/* Video Editor card */}
