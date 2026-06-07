@@ -236,10 +236,12 @@ export async function makeUserAdmin(userId: string) {
 
   const { error } = await supabase
     .from('admin_users')
-    .insert({ id: userId, role: 'admin' })
-    .on('CONFLICT', (query) => query.do_nothing());
+    .insert({ id: userId, role: 'admin' });
 
-  if (error) throw error;
+  // Ignore duplicate key conflict—user may already be admin
+  if (error && !error.message.includes('duplicate')) {
+    throw error;
+  }
   return { success: true };
 }
 
