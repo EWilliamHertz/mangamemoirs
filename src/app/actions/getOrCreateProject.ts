@@ -13,18 +13,18 @@ export async function getOrCreateDefaultProject(): Promise<string> {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  // Try to find an existing project
+  // Try to find existing project — maybeSingle() returns null (not error) when 0 rows
   const { data: existing } = await supabase
     .from('projects')
     .select('id')
     .eq('user_id', userId)
     .order('created_at', { ascending: true })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (existing?.id) return existing.id;
 
-  // Create a default project
+  // Create default project
   const { data, error } = await supabase
     .from('projects')
     .insert({

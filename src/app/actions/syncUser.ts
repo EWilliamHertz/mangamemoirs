@@ -8,6 +8,7 @@ export async function syncUser() {
   if (!userId) return null;
 
   const user = await currentUser();
+  const email = user?.emailAddresses?.[0]?.emailAddress ?? '';
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,16 +16,24 @@ export async function syncUser() {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  const email = user?.emailAddresses?.[0]?.emailAddress ?? '';
+  // Check if user already exists
+  const { data: existing } = await supabase
+    .from('users')
+    .select('id, credits')
+    .eq('id', userId)
+    .maybeSingle();
 
+  if (existing) return existing;
+
+  // Insert new user with 8 free credits
   const { data, error } = await supabase
     .from('users')
-    .upsert({ id: userId, email, credits: 8 }, { onConflict: 'id', ignoreDuplicates: true })
+    .insert({ id: userId, email, credits: 8 })
     .select()
     .single();
 
   if (error) {
-    console.error('syncUser error:', error);
+    console.error('syncUser insert error:', error);
     return null;
   }
   return data;
