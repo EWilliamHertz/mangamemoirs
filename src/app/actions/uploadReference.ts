@@ -15,51 +15,71 @@ export async function uploadReference(
   name?: string,
   category?: string
 ) {
-  const { userId } = await auth();
-  if (!userId) throw new Error('Unauthorized: must be logged in');
+  try {
+    const { userId } = await auth();
+    if (!userId) throw new Error('Unauthorized: must be logged in');
 
-  const file = formData.get('file') as File | null;
-  if (!file) throw new Error('No file provided');
+    const file = formData.get('file') as File | null;
+    if (!file) throw new Error('No file provided');
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+    console.log(`[uploadReference] Starting upload for file: ${file.name} (${file.type}), userId: ${userId}`);
 
-  // Upload file to Supabase Storage
-  const storagePath = `${userId}/${Date.now()}-${file.name}`;
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
 
-  const { error: uploadError } = await supabase.storage
-    .from('references')
-    .upload(storagePath, buffer, { contentType: file.type, upsert: false });
+    // Upload file to Supabase Storage
+    const storagePath = `${userId}/${Date.now()}-${file.name}`;
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
 
-  if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
+    console.log(`[uploadReference] Uploading to storage: ${storagePath} (${buffer.length} bytes)`);
 
-  // Get public URL
-  const { data: urlData } = supabase.storage.from('references').getPublicUrl(storagePath);
-  const fileUrl = urlData?.publicUrl ?? '';
+    const { error: uploadError } = await supabase.storage
+      .from('references')
+      .upload(storagePath, buffer, { contentType: file.type, upsert: false });
 
-  // Insert into references table using correct schema columns
-  const { data, error } = await supabase
-    .from('references')
-    .insert({
+    if (uploadError) {
+      console.error(`[uploadReference] Storage upload error:`, uploadError);
+      throw new Error(`Storage upload failed: ${uploadError.message}`);
+    }
+
+    console.log(`[uploadReference] Storage upload successful`);
+
+    // Get public URL
+    const { data: urlData } = supabase.storage.from('references').getPublicUrl(storagePath);
+    const fileUrl = urlData?.publicUrl ?? '';
+    console.log(`[uploadReference] Public URL: ${fileUrl}`);
+
+    // Insert into references table using correct schema columns
+    const insertPayload = {
       user_id: userId,
       name: name || file.name,
       type: mimeToRefType(file.type),
       category: category || 'object',
       file_url: fileUrl,
-    })
-    .select()
-    .single();
+    };
+    console.log(`[uploadReference] Inserting into references table:`, insertPayload);
 
-  if (error) {
-    // Clean up storage on DB failure
-    await supabase.storage.from('references').remove([storagePath]);
-    throw new Error(`Database save failed: ${error.message}`);
+    const { data, error } = await supabase
+      .from('references')
+      .insert(insertPayload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(`[uploadReference] Database insert error:`, error);
+      // Clean up storage on DB failure
+      await supabase.storage.from('references').remove([storagePath]);
+      throw new Error(`Database save failed: ${error.message}`);
+    }
+
+    console.log(`[uploadReference] Success:`, data);
+    return data;
+  } catch (err) {
+    console.error('[uploadReference] Fatal error:', err);
+    throw err;
   }
-
-  return data;
 }
