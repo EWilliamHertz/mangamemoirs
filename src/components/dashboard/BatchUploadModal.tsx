@@ -129,6 +129,7 @@ export default function BatchUploadModal({
                       type="text"
                       value={item.name}
                       onChange={e => handleNameChange(idx, e.target.value)}
+                      onFocus={e => e.currentTarget.select()}
                       className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       placeholder="Reference name (without extension)"
                     />
