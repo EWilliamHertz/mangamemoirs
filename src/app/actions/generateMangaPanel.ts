@@ -56,7 +56,7 @@ export async function generateMangaPanel(input: MangaPanelInput) {
       });
 
       // 4. Save to Storage
-      const buffer = Buffer.from(await response.arrayBuffer());
+      const buffer = Buffer.from(await (response as Blob).arrayBuffer());
       const fileName = `${userId}/panel_${Date.now()}.png`;
       
       const { error: uploadError } = await supabase.storage
