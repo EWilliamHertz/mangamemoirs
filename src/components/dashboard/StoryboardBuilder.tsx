@@ -151,21 +151,26 @@ export default function StoryboardBuilder({ projectId }: StoryboardBuilderProps)
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-8">
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-white mb-2">📖 Storyboard Builder</h2>
+        <p className="text-gray-400">Transform your memoir into a visual storyboard with manga panels and anime clips.</p>
+      </div>
+
       {/* Memoir Input */}
-      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <h2 className="text-xl font-bold text-white mb-4">📖 Your Memoir</h2>
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 shadow-lg">
+        <h3 className="text-lg font-bold text-white mb-4">Your Memoir</h3>
         <textarea
           value={memoirText}
           onChange={(e) => setMemoirText(e.target.value)}
           placeholder="Paste your memoir, diary entry, or story here... (or upload a PDF)"
           rows={6}
-          className="w-full px-4 py-3 bg-gray-900 text-white rounded border border-gray-700 focus:border-purple-500"
+          className="w-full px-4 py-3 bg-gray-900 text-white font-medium rounded-lg border border-gray-700 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition resize-none"
         />
         <button
           onClick={handleGenerateStoryboard}
           disabled={loading}
-          className="mt-4 w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-700 disabled:to-gray-700 text-white font-semibold rounded"
+          className="mt-4 w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-700 disabled:to-gray-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all"
         >
           {loading ? '⟳ Generating Storyboard...' : '✨ Generate Storyboard'}
         </button>
@@ -173,12 +178,12 @@ export default function StoryboardBuilder({ projectId }: StoryboardBuilderProps)
 
       {/* Tabs */}
       {scenes.length > 0 && (
-        <div className="flex gap-2 border-b border-gray-700">
+        <div className="flex gap-1 border-b border-gray-700 bg-gradient-to-b from-gray-800/50 to-gray-900/50 -mx-8 px-8">
           <button
             onClick={() => setActiveTab('preview')}
-            className={`px-6 py-3 font-semibold transition ${
+            className={`px-6 py-3 font-semibold transition-all rounded-t-lg ${
               activeTab === 'preview'
-                ? 'border-b-2 border-purple-500 text-white'
+                ? 'border-b-2 border-purple-500 text-white bg-purple-600/10'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -186,9 +191,9 @@ export default function StoryboardBuilder({ projectId }: StoryboardBuilderProps)
           </button>
           <button
             onClick={() => setActiveTab('bookmarks')}
-            className={`px-6 py-3 font-semibold transition ${
+            className={`px-6 py-3 font-semibold transition-all rounded-t-lg ${
               activeTab === 'bookmarks'
-                ? 'border-b-2 border-purple-500 text-white'
+                ? 'border-b-2 border-purple-500 text-white bg-purple-600/10'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -196,9 +201,9 @@ export default function StoryboardBuilder({ projectId }: StoryboardBuilderProps)
           </button>
           <button
             onClick={() => setActiveTab('editor')}
-            className={`px-6 py-3 font-semibold transition ${
+            className={`px-6 py-3 font-semibold transition-all rounded-t-lg ${
               activeTab === 'editor'
-                ? 'border-b-2 border-purple-500 text-white'
+                ? 'border-b-2 border-purple-500 text-white bg-purple-600/10'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -213,7 +218,7 @@ export default function StoryboardBuilder({ projectId }: StoryboardBuilderProps)
           {scenes.map((scene, idx) => (
             <div
               key={scene.id}
-              className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-purple-500 transition"
+              className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 hover:border-purple-500 transition-all shadow-sm hover:shadow-md group"
             >
               <div className="flex justify-between items-start mb-4">
                 <div>
