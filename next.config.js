@@ -9,6 +9,9 @@ const nextConfig = {
     ],
   },
   serverExternalPackages: ['pdf-parse', 'svix'],
+  serverActions: {
+    bodySize: 52428800, // 50 MB — allow large image/video uploads
+  },
 };
 
 module.exports = nextConfig;
