@@ -80,11 +80,18 @@ export default function ReferencesUpload({ userId }: { userId: string }) {
         try {
           // Upload to Supabase Storage
           const fileName = `${userId}/${Date.now()}-${file.name}`;
+          console.log(`Uploading ${file.name} to bucket 'references' at path: ${fileName}`);
+          
           const { error: uploadError } = await supabase.storage
             .from('references')
             .upload(fileName, file);
 
-          if (uploadError) throw uploadError;
+          if (uploadError) {
+            console.error(`Upload error for ${file.name}:`, uploadError);
+            throw uploadError;
+          }
+
+          console.log(`✓ Successfully uploaded ${file.name}`);
 
           // Add to references list (in real app, save to DB)
           const newRef: Reference = {
@@ -98,7 +105,9 @@ export default function ReferencesUpload({ userId }: { userId: string }) {
 
           setReferences(prev => [newRef, ...prev]);
         } catch (err) {
-          setError(`Failed to upload ${file.name}`);
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          console.error(`Failed to upload ${file.name}:`, errorMsg);
+          setError(`Failed to upload ${file.name}: ${errorMsg}`);
         }
       }
     } finally {
