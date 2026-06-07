@@ -10,6 +10,7 @@ export interface ReferenceItem {
   id: string;
   name: string;
   type: 'image' | 'video' | 'pdf' | 'text';
+  category?: 'character' | 'animal' | 'scene' | 'object';
   file_url: string;
   tag: string; // e.g. "hugo", "gloriasroom"
 }
@@ -26,7 +27,7 @@ export async function fetchReferences(): Promise<ReferenceItem[]> {
 
   const { data, error } = await supabase
     .from('references')
-    .select('id, name, type, file_url')
+    .select('id, name, type, category, file_url')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 

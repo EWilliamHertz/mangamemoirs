@@ -10,7 +10,11 @@ function mimeToRefType(mime: string): 'pdf' | 'text' | 'image' | 'video' {
   return 'text';
 }
 
-export async function uploadReference(formData: FormData) {
+export async function uploadReference(
+  formData: FormData,
+  name?: string,
+  category?: string
+) {
   const { userId } = await auth();
   if (!userId) throw new Error('Unauthorized: must be logged in');
 
@@ -43,8 +47,9 @@ export async function uploadReference(formData: FormData) {
     .from('references')
     .insert({
       user_id: userId,
-      name: file.name,
+      name: name || file.name,
       type: mimeToRefType(file.type),
+      category: category || 'object',
       file_url: fileUrl,
     })
     .select()

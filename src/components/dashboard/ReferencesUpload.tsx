@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { uploadReference } from '@/app/actions/uploadReference';
+import BatchUploadModal from './BatchUploadModal';
 
 interface Reference {
   id: string;
   name: string;
   type: string;
+  category?: string;
   file_url: string;
   created_at: string;
 }
@@ -20,7 +21,7 @@ export default function ReferencesUpload({
 }) {
   const [references, setReferences] = useState<Reference[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const allowedTypes = [
@@ -51,42 +52,41 @@ export default function ReferencesUpload({
     handleFiles(Array.from(e.target.files ?? []));
   };
 
-  const handleFiles = async (files: File[]) => {
+  const handleFiles = (files: File[]) => {
     setError(null);
-    setIsUploading(true);
-    try {
-      for (const file of files) {
-        if (!allowedTypes.includes(file.type)) {
-          setError(`${file.name}: unsupported type. Use PDF, image, video, or text.`);
-          continue;
-        }
-        if (file.size > 50 * 1024 * 1024) {
-          setError(`${file.name}: file too large (max 50 MB)`);
-          continue;
-        }
-        try {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('projectId', projectId);
 
-          const record = await uploadReference(formData);
-          setReferences(prev => [
-            {
-              id: record.id,
-              name: record.name,
-              type: record.type,
-              file_url: record.file_url ?? '',
-              created_at: record.created_at ?? new Date().toISOString(),
-            },
-            ...prev,
-          ]);
-        } catch (err) {
-          setError(`Failed to upload ${file.name}: ${err instanceof Error ? err.message : String(err)}`);
-        }
+    // Validate files
+    const valid: File[] = [];
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        setError(`${file.name}: unsupported type. Use PDF, image, video, or text.`);
+        continue;
       }
-    } finally {
-      setIsUploading(false);
+      if (file.size > 50 * 1024 * 1024) {
+        setError(`${file.name}: file too large (max 50 MB)`);
+        continue;
+      }
+      valid.push(file);
     }
+
+    if (valid.length > 0) {
+      setPendingFiles(valid);
+    }
+  };
+
+  const handleUploadSuccess = (uploaded: any[]) => {
+    setReferences(prev => [
+      ...uploaded.map(record => ({
+        id: record.id,
+        name: record.name,
+        type: record.type,
+        category: record.category,
+        file_url: record.file_url ?? '',
+        created_at: record.created_at ?? new Date().toISOString(),
+      })),
+      ...prev,
+    ]);
+    setPendingFiles([]);
   };
 
   const getFileIcon = (type: string) => {
@@ -94,6 +94,20 @@ export default function ReferencesUpload({
     if (type === 'pdf') return '📄';
     if (type === 'video') return '🎥';
     return '📝';
+  };
+
+  const getCategoryBadge = (category?: string) => {
+    switch (category) {
+      case 'character':
+        return '👤 Character';
+      case 'animal':
+        return '🐾 Animal';
+      case 'scene':
+        return '🏞️ Scene';
+      case 'object':
+      default:
+        return '📦 Object';
+    }
   };
 
   return (
@@ -112,7 +126,7 @@ export default function ReferencesUpload({
         <div className="text-4xl mb-4">📤</div>
         <h3 className="text-xl font-bold text-white mb-2">Upload References</h3>
         <p className="text-gray-400 mb-6">
-          Drag PDF memoirs, images, videos, or text files here
+          Drag PDF memoirs, images, videos, or text files here. Rename & categorize them in the next step.
         </p>
         <label>
           <input
@@ -120,11 +134,11 @@ export default function ReferencesUpload({
             multiple
             accept=".pdf,.png,.jpg,.jpeg,.webp,.mp4,.txt"
             onChange={handleFileInput}
-            disabled={isUploading}
+            disabled={pendingFiles.length > 0}
             className="hidden"
           />
           <span className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg inline-block transition cursor-pointer">
-            {isUploading ? '⏳ Uploading…' : 'Choose Files'}
+            {pendingFiles.length > 0 ? '⏳ Preparing…' : 'Choose Files'}
           </span>
         </label>
       </div>
@@ -158,6 +172,9 @@ export default function ReferencesUpload({
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-medium truncate text-sm">{ref.name}</p>
                     <p className="text-gray-400 text-xs capitalize">{ref.type}</p>
+                    <p className="text-purple-300 text-xs mt-1">
+                      {getCategoryBadge(ref.category)}
+                    </p>
                   </div>
                   {ref.file_url && (
                     <a
@@ -175,6 +192,15 @@ export default function ReferencesUpload({
           </div>
         )}
       </div>
+
+      {/* Batch Upload Modal */}
+      {pendingFiles.length > 0 && (
+        <BatchUploadModal
+          files={pendingFiles}
+          onClose={() => setPendingFiles([])}
+          onSuccess={handleUploadSuccess}
+        />
+      )}
     </div>
   );
 }

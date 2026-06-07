@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS references (
   user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name          TEXT NOT NULL,
   type          TEXT NOT NULL CHECK (type IN ('pdf','text','image','video')),
+  category      TEXT DEFAULT 'object' CHECK (category IN ('character','animal','scene','object')),
   content       TEXT,                    -- extracted text / raw text
   file_url      TEXT,                    -- Supabase Storage public URL
   thumbnail_url TEXT,

@@ -238,29 +238,42 @@ export default function GenerationStudio({ initialCredits }: GenerationStudioPro
               </div>
             ) : (
               <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
-                {references.map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => setPrompt((p) => p + (p.endsWith(' ') || p === '' ? '' : ' ') + `@${r.tag} `)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/40 transition-all text-left group"
-                    title={`Click to insert @${r.tag}`}
-                  >
-                    {r.type === 'image' ? (
-                      <img src={r.file_url} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center text-xs flex-shrink-0">
-                        {r.type === 'video' ? '🎬' : r.type === 'pdf' ? '📄' : '📝'}
+                {references.map((r) => {
+                  const getCategoryIcon = (cat?: string) => {
+                    switch (cat) {
+                      case 'character': return '👤';
+                      case 'animal': return '🐾';
+                      case 'scene': return '🏞️';
+                      default: return '📦';
+                    }
+                  };
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => setPrompt((p) => p + (p.endsWith(' ') || p === '' ? '' : ' ') + `@${r.tag} `)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/40 transition-all text-left group"
+                      title={`Click to insert @${r.tag}`}
+                    >
+                      {r.type === 'image' ? (
+                        <img src={r.file_url} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center text-xs flex-shrink-0">
+                          {r.type === 'video' ? '🎬' : r.type === 'pdf' ? '📄' : '📝'}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="text-xs font-mono font-bold text-purple-300 group-hover:text-purple-200">
+                          @{r.tag}
+                        </div>
+                        <div className="text-xs text-white/40 truncate">{r.name}</div>
                       </div>
-                    )}
-                    <div className="min-w-0">
-                      <div className="text-xs font-mono font-bold text-purple-300 group-hover:text-purple-200">
-                        @{r.tag}
+                      <div className="ml-auto flex items-center gap-2">
+                        <span className="text-xs text-white/50">{getCategoryIcon(r.category)}</span>
+                        <div className="text-white/20 group-hover:text-purple-400 text-xs">+</div>
                       </div>
-                      <div className="text-xs text-white/40 truncate">{r.name}</div>
-                    </div>
-                    <div className="ml-auto text-white/20 group-hover:text-purple-400 text-xs">+</div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
