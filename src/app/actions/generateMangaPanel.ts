@@ -4,14 +4,14 @@ import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 
 export interface MangaPanelInput {
-  prompt: string;
-  isColored?: boolean;
-  aspectRatio?: 'portrait' | 'landscape' | 'square' | string;
-  resolution?: string;
-  style?: string;
-  referenceImageUrls?: string[];
+  prompt: string;
+  isColored?: boolean;
+  aspectRatio?: 'portrait' | 'landscape' | 'square' | string;
+  resolution?: string;
+  style?: string;
+  referenceImageUrls?: string[];
+  provider?: 'hf' | 'banana';
 }
-
 export interface MangaPanelResult {
   imageUrl: string;
   creditsUsed: number;
@@ -28,7 +28,8 @@ export async function generateMangaPanel(input: MangaPanelInput): Promise<MangaP
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  // 1. Check credits (1 per panel)
+ // 1. Check credits based on provider
+  const cost = input.provider === 'banana' ? 3 : 1;
   const { data: user, error: userErr } = await supabase
     .from('users')
     .select('credits')
@@ -36,7 +37,7 @@ export async function generateMangaPanel(input: MangaPanelInput): Promise<MangaP
     .maybeSingle();
 
   if (userErr || !user) throw new Error('User not found');
-  if (user.credits < 1) throw new Error('Insufficient credits — need 1 credit per manga panel');
+  if (user.credits < cost) throw new Error(`Insufficient credits — need ${cost} credits for this provider.`);
 
   // 2. Build the Auto-Prompt for SD3
   const stylePrompt = input.isColored

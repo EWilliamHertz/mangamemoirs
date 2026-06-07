@@ -8,6 +8,7 @@ export default function GenerationStudio() {
   const [prompt, setPrompt] = useState('');
   const [isColored, setIsColored] = useState(false);
   const [aspectRatio, setAspectRatio] = useState('portrait');
+  const [provider, setProvider] = useState<'hf' | 'banana'>('hf');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPanels, setGeneratedPanels] = useState<string[]>([]);
   const [activeNav, setActiveNav] = useState('studio');
@@ -106,6 +107,23 @@ export default function GenerationStudio() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Provider Toggle Row */}
+            <div className="flex items-center gap-2 px-3 py-1 mb-2">
+              <span className="text-xs text-gray-500 uppercase tracking-wider font-bold">Engine:</span>
+              <button 
+                onClick={() => setProvider('hf')}
+                className={`text-xs px-2 py-1 rounded transition-all ${provider === 'hf' ? 'bg-white/10 text-white font-medium' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                Standard HF (1 Cr)
+              </button>
+              <button 
+                onClick={() => setProvider('banana')}
+                className={`text-xs px-2 py-1 rounded transition-all flex items-center gap-1 ${provider === 'banana' ? 'bg-plasma/20 text-plasma font-medium border border-plasma/30' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                Premium Banana (3 Cr)
+              </button>
             </div>
 
             {/* Input Row */}
