@@ -18,10 +18,23 @@ export default function ReferencesUpload({ userId }: { userId: string }) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  );
+  // Check if required env vars are present
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return (
+      <div className="p-8 text-center">
+        <div className="bg-red-900 bg-opacity-50 border border-red-600 rounded-lg p-6 text-red-200">
+          <p className="font-bold mb-2">⚠️ Configuration Error</p>
+          <p className="text-sm">Supabase environment variables are missing.</p>
+          <p className="text-xs mt-2">Contact support or check your deployment settings.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
   const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'video/mp4', 'text/plain'];
 
