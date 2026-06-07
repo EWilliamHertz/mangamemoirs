@@ -11,10 +11,11 @@ export default async function DashboardPage() {
   const user = await currentUser();
 
   // Ensure user row exists in Supabase and get/create default project
-  await syncUser();
+  const dbUser = await syncUser();
   const projectId = await getOrCreateDefaultProject();
 
   const firstName = user?.firstName ?? 'User';
+  const credits = dbUser?.credits ?? 8;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-8">
@@ -29,13 +30,13 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg p-6 text-white shadow-xl">
             <div className="text-sm font-medium text-purple-200 mb-2">Available Credits</div>
-            <div className="text-4xl font-bold">8</div>
-            <div className="text-sm text-purple-300 mt-2">3 panels + 1 clip included</div>
+            <div className="text-4xl font-bold">{credits}</div>
+            <div className="text-sm text-purple-300 mt-2">Panel = 3cr · 5s clip = 2cr</div>
           </div>
           <div className="bg-gradient-to-br from-pink-600 to-pink-800 rounded-lg p-6 text-white shadow-xl">
-            <div className="text-sm font-medium text-pink-200 mb-2">Projects</div>
-            <div className="text-4xl font-bold">1</div>
-            <div className="text-sm text-pink-300 mt-2">Your memoir project</div>
+            <div className="text-sm font-medium text-pink-200 mb-2">AI Models Active</div>
+            <div className="text-4xl font-bold">2</div>
+            <div className="text-sm text-pink-300 mt-2">Nano Banana · Seedance 2.0</div>
           </div>
           <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg p-6 text-white shadow-xl">
             <div className="text-sm font-medium text-blue-200 mb-2">References</div>
@@ -45,7 +46,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Dashboard Tabs */}
-        <DashboardTabs userId={userId} projectId={projectId} />
+        <DashboardTabs userId={userId} projectId={projectId} credits={credits} />
       </div>
     </div>
   );

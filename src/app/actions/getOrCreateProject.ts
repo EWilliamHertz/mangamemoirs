@@ -32,7 +32,6 @@ export async function getOrCreateDefaultProject(): Promise<string> {
       title: 'My First Memoir',
       story: '',
       style: 'Anime',
-      mood: 'Dramatic',
     })
     .select('id')
     .single();

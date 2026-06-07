@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ReferencesUpload from './ReferencesUpload';
 import StoryboardBuilder from './StoryboardBuilder';
+import GenerationStudio from './GenerationStudio';
 
 type TabId = 'references' | 'storyboard' | 'generate' | 'editors';
 
@@ -17,9 +18,11 @@ const tabs: { id: TabId; label: string; icon: string }[] = [
 export default function DashboardTabs({
   userId,
   projectId,
+  credits,
 }: {
   userId: string;
   projectId: string;
+  credits: number;
 }) {
   const [activeTab, setActiveTab] = useState<TabId>('references');
   const router = useRouter();
@@ -57,21 +60,7 @@ export default function DashboardTabs({
         )}
 
         {activeTab === 'generate' && (
-          <div className="p-8">
-            <div className="text-center py-24">
-              <div className="text-6xl mb-4">✨</div>
-              <h2 className="text-3xl font-bold text-white mb-4">Generation Studio</h2>
-              <p className="text-gray-400 max-w-md mx-auto mb-8">
-                Once you've built your storyboard, generate manga panels and anime clips scene-by-scene.
-              </p>
-              <button
-                onClick={() => setActiveTab('storyboard')}
-                className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition"
-              >
-                Create Storyboard →
-              </button>
-            </div>
-          </div>
+          <GenerationStudio initialCredits={credits} />
         )}
 
         {activeTab === 'editors' && (
