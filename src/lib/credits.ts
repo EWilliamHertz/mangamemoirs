@@ -4,7 +4,7 @@
 // Margin funds hosting, Supabase storage, and OpenAI markup.
 
 export const CREDIT_COSTS = {
-  PANEL: 2,       // manga panel (DALL-E 3 HD)
+  PANEL: 1,       // manga panel (Stable Diffusion 3 via HF)
   CLIP: 10,       // 5-second anime clip
   SCENE_BREAK: 0, // GPT-4o scene breakdown is free (keep conversion funnel smooth)
 } as const;
