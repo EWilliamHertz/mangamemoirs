@@ -64,9 +64,9 @@ export default function VideoEditor({ initialCredits }: VideoEditorProps) {
       const result = await generateAnimeClip({ 
         prompt, 
         motion: motionLevel,
-        referenceImageUrl: selectedRefs.length > 0 ? selectedRefs[0].url : undefined
+        firstFrameUrl: selectedRefs.length > 0 ? selectedRefs[0].url : undefined
       });
-      setGeneratedClips(prev => [result.clipUrl, ...prev]);
+      setGeneratedClips(prev => [result.videoUrl, ...prev]);
       setPrompt('');
       setCredits(prev => prev - 10);
     } catch (error) {
