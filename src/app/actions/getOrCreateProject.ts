@@ -24,14 +24,12 @@ export async function getOrCreateDefaultProject(): Promise<string> {
 
   if (existing?.id) return existing.id;
 
-  // Create default project
+  // Create default project — only insert columns that definitely exist
   const { data, error } = await supabase
     .from('projects')
     .insert({
       user_id: userId,
       title: 'My First Memoir',
-      story: '',
-      style: 'Anime',
     })
     .select('id')
     .single();
