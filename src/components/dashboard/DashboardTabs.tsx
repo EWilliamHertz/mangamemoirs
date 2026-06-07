@@ -4,15 +4,6 @@ import { useState } from 'react';
 import ReferencesUpload from './ReferencesUpload';
 import StoryboardBuilder from './StoryboardBuilder';
 
-interface Reference {
-  id: string;
-  file_name: string;
-  file_type: string;
-  file_size: number;
-  storage_path: string;
-  created_at: string;
-}
-
 interface Tab {
   id: 'references' | 'storyboard' | 'generate';
   label: string;
@@ -25,9 +16,14 @@ const tabs: Tab[] = [
   { id: 'generate', label: 'Generate', icon: '✨' },
 ];
 
-export default function DashboardTabs({ userId }: { userId: string }) {
+export default function DashboardTabs({
+  userId,
+  projectId,
+}: {
+  userId: string;
+  projectId: string;
+}) {
   const [activeTab, setActiveTab] = useState<'references' | 'storyboard' | 'generate'>('references');
-  const [uploadedReferences, setUploadedReferences] = useState<Reference[]>([]);
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -54,11 +50,11 @@ export default function DashboardTabs({ userId }: { userId: string }) {
       {/* Tab Content */}
       <div className="max-w-7xl mx-auto">
         {activeTab === 'references' && (
-          <ReferencesUpload userId={userId} projectId="default" />
+          <ReferencesUpload userId={userId} projectId={projectId} />
         )}
 
         {activeTab === 'storyboard' && (
-          <StoryboardBuilder projectId="default" />
+          <StoryboardBuilder projectId={projectId} />
         )}
 
         {activeTab === 'generate' && (

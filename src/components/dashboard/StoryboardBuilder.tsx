@@ -43,8 +43,8 @@ export default function StoryboardBuilder({ projectId }: StoryboardBuilderProps)
 
     try {
       setLoading(true);
-      const result = await generateStoryboard(projectId, memoirText);
-      setScenes(result.scenes);
+      const result = await generateStoryboard({ projectId, referenceIds: [], memoirContent: memoirText });
+      setScenes(result.storyboard?.scenes ?? []);
     } catch (error) {
       console.error('Failed to generate storyboard:', error);
       alert('Failed to generate storyboard');
