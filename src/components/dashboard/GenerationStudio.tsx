@@ -1,595 +1,332 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { generateMangaPanel } from '@/app/actions/generateMangaPanel';
-import { generateAnimeClip } from '@/app/actions/generateAnimeClip';
-import { fetchReferences, type ReferenceItem } from '@/app/actions/fetchReferences';
-import MentionTextarea, { resolveMentions } from './MentionTextarea';
-
-type Mode = 'panel' | 'clip';
-type PanelResolution = '1K' | '2K' | '4K';
-type ClipResolution = '480p' | '720p' | '1080p';
-type AspectRatioPanel = 'portrait' | 'landscape' | 'square';
-type AspectRatioClip = '16:9' | '9:16' | '1:1' | '4:3' | 'adaptive';
-
-interface GeneratedItem {
-  id: string;
-  type: 'panel' | 'clip';
-  url: string;
-  prompt: string;
-  timestamp: Date;
-}
+import { uploadReference } from '@/app/actions/uploadReference';
+import { saveUrlAsReference } from '@/app/actions/saveUrlAsReference';
+import { Loader2, Sparkles, Image as ImageIcon, Send, Paintbrush, Coins, UploadCloud, Users, X, CheckCircle2, BookmarkPlus } from 'lucide-react';
+import { shareToCommunity } from '@/app/actions/shareToCommunity';
 
 interface GenerationStudioProps {
   initialCredits: number;
 }
 
+interface Reference {
+  name: string;
+  url: string;
+}
+
 export default function GenerationStudio({ initialCredits }: GenerationStudioProps) {
-  const [mode, setMode] = useState<Mode>('panel');
+  const [activeTab, setActiveTab] = useState<'prompt' | 'references'>('prompt');
   const [prompt, setPrompt] = useState('');
+  const [isColored, setIsColored] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState('portrait');
+  const [provider, setProvider] = useState<'hf' | 'banana'>('hf');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedPanels, setGeneratedPanels] = useState<string[]>([]);
   const [credits, setCredits] = useState(initialCredits);
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [progressLabel, setProgressLabel] = useState('');
-  const [error, setError] = useState('');
-  const [gallery, setGallery] = useState<GeneratedItem[]>([]);
-  const [selected, setSelected] = useState<GeneratedItem | null>(null);
 
-  // Panel settings
-  const [panelRes, setPanelRes] = useState<PanelResolution>('2K');
-  const [panelAspect, setPanelAspect] = useState<AspectRatioPanel>('portrait');
-  const [panelStyle, setPanelStyle] = useState('manga comic panel, black and white ink, detailed linework');
+  // References State
+  const [references, setReferences] = useState<Reference[]>([]);
+  const [selectedRefs, setSelectedRefs] = useState<Reference[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Clip settings
-  const [clipDuration, setClipDuration] = useState(5);
-  const [clipRes, setClipRes] = useState<ClipResolution>('720p');
-  const [clipAspect, setClipAspect] = useState<AspectRatioClip>('16:9');
-  const [clipAudio, setClipAudio] = useState(true);
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  // References loaded from Supabase
-  const [references, setReferences] = useState<ReferenceItem[]>([]);
-  const [refsLoading, setRefsLoading] = useState(true);
-
-  const progressRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    fetchReferences().then((refs) => {
-      setReferences(refs);
-      setRefsLoading(false);
-    });
-  }, []);
-
-  const STYLE_PRESETS: { label: string; value: string }[] = [
-    { label: '⬛ Classic Manga', value: 'manga comic panel, black and white ink, detailed linework' },
-    { label: '🎨 Anime Color', value: 'anime style, vibrant colors, cel shading, Studio Ghibli inspired' },
-    { label: '🌑 Dark Fantasy', value: 'dark manga, heavy shadows, dramatic lighting, Berserk style' },
-    { label: '✨ Shojo', value: 'shojo manga style, soft lines, sparkles, romantic atmosphere' },
-    { label: '💥 Action', value: 'action manga, dynamic poses, speed lines, explosive energy, One Piece style' },
-    { label: '🏯 Historical', value: 'samurai manga style, feudal Japan setting, traditional ink art' },
-  ];
-
-  function simulateProgress(label: string, durationMs: number) {
-    setProgress(0);
-    setProgressLabel(label);
-    const step = 100 / (durationMs / 300);
-    progressRef.current = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 90) {
-          if (progressRef.current) clearInterval(progressRef.current);
-          return 90;
-        }
-        return p + step;
-      });
-    }, 300);
-  }
-
-  async function handleGenerate() {
-    if (!prompt.trim()) {
-      setError('Please enter a prompt first');
-      return;
-    }
-    setError('');
-    setLoading(true);
-
+    setIsUploading(true);
     try {
-      // Resolve @mentions → inject their URLs as reference images
-      const { cleanPrompt, resolvedUrls } = resolveMentions(prompt, references);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('name', file.name.split('.')[0]); 
+      formData.append('category', 'Character');
 
-      if (mode === 'panel') {
-        const cost = 3;
-        if (credits < cost) {
-          setError(`Need ${cost} credits but you have ${credits}. Buy more credits below.`);
-          setLoading(false);
-          return;
-        }
-        simulateProgress('🎨 Generating manga panel with Nano Banana Pro…', 30000);
-
-        const result = await generateMangaPanel({
-          prompt: cleanPrompt,
-          resolution: panelRes,
-          aspectRatio: panelAspect,
-          style: panelStyle,
-          referenceImageUrls: resolvedUrls.length > 0 ? resolvedUrls : undefined,
+      const res = await uploadReference(formData);
+      if (res.success && res.reference) {
+        const newRef = { name: res.reference.name, url: res.reference.image_url };
+        setReferences(prev => [newRef, ...prev]);
+        setSelectedRefs(prev => {
+          if (!prev.find(r => r.url === newRef.url)) return [...prev, newRef];
+          return prev;
         });
-
-        setProgress(100);
-        setCredits(result.remainingCredits);
-        const item: GeneratedItem = {
-          id: crypto.randomUUID(),
-          type: 'panel',
-          url: result.imageUrl,
-          prompt,
-          timestamp: new Date(),
-        };
-        setGallery((prev) => [item, ...prev]);
-        setSelected(item);
-
-      } else {
-        const cost = Math.max(2, Math.ceil((clipDuration / 5) * 2));
-        if (credits < cost) {
-          setError(`Need ${cost} credits but you have ${credits}. Buy more credits below.`);
-          setLoading(false);
-          return;
-        }
-        simulateProgress(`🎬 Generating ${clipDuration}s anime clip with Seedance 2.0…`, 120000);
-
-        const result = await generateAnimeClip({
-          prompt: cleanPrompt,
-          duration: clipDuration,
-          resolution: clipRes,
-          aspectRatio: clipAspect,
-          generateAudio: clipAudio,
-          referenceImageUrls: resolvedUrls.length > 0 ? resolvedUrls : undefined,
-        });
-
-        setProgress(100);
-        setCredits(result.remainingCredits);
-        const item: GeneratedItem = {
-          id: crypto.randomUUID(),
-          type: 'clip',
-          url: result.videoUrl,
-          prompt,
-          timestamp: new Date(),
-        };
-        setGallery((prev) => [item, ...prev]);
-        setSelected(item);
       }
     } catch (err) {
-      if (progressRef.current) clearInterval(progressRef.current);
-      setError(err instanceof Error ? err.message : 'Generation failed');
+      console.error(err);
+      alert('Failed to upload character reference.');
     } finally {
-      if (progressRef.current) clearInterval(progressRef.current);
-      setLoading(false);
-      setProgress(0);
-      setProgressLabel('');
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  }
+  };
 
-  const costPanel = 3;
-  const costClip = Math.max(2, Math.ceil((clipDuration / 5) * 2));
-  const currentCost = mode === 'panel' ? costPanel : costClip;
-  const canAfford = credits >= currentCost;
+  const toggleReference = (ref: Reference) => {
+    setSelectedRefs(prev => 
+      prev.find(r => r.url === ref.url) 
+        ? prev.filter(r => r.url !== ref.url) 
+        : [...prev, ref] 
+    );
+  };
 
-  // Image references only (for panel generation)
-  const imageRefs = references.filter((r) => r.type === 'image');
+  const handleSaveAsReference = async (url: string) => {
+    const name = window.prompt('Enter a character name for this image:');
+    if (!name || !name.trim()) return;
+
+    try {
+      const res = await saveUrlAsReference(url, name.trim());
+      if (res.success && res.reference) {
+        const newRef = { name: res.reference.name, url: res.reference.image_url };
+        setReferences(prev => [newRef, ...prev]);
+        alert(`Successfully saved @${name.trim()} to your characters!`);
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Failed to save reference.');
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+    
+    const cost = provider === 'banana' ? 3 : 1;
+    if (credits < cost) {
+      alert(`You need ${cost} credits to generate using ${provider.toUpperCase()}.`);
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const result = await generateMangaPanel({ 
+        prompt, 
+        isColored, 
+        aspectRatio,
+        provider,
+        referenceImageUrls: selectedRefs.map(r => r.url)
+      });
+      setGeneratedPanels(prev => [result.imageUrl, ...prev]);
+      setPrompt('');
+      setCredits(prev => prev - cost);
+    } catch (error) {
+      console.error(error);
+      alert('Generation failed. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const publishToCommunity = async (url: string, caption: string, type: string) => {
+    try {
+      await shareToCommunity(url, caption, type);
+      alert("Successfully published to community feed!");
+    } catch (err) {
+      alert("Failed to publish.");
+    }
+  };
 
   return (
-    <div className="flex flex-col gap-6 p-4 text-white min-h-screen"
-      style={{ background: 'linear-gradient(135deg, #0f0f1a 0%, #1a0f2e 100%)' }}>
-
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Generation Studio</h2>
-          <p className="text-purple-300 text-sm mt-1">
-            Manga panels via <span className="font-semibold text-yellow-300">Nano Banana Pro</span> · Anime clips via <span className="font-semibold text-blue-300">Seedance 2.0</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className={`px-4 py-2 rounded-full text-sm font-bold border ${canAfford ? 'bg-green-900/40 border-green-500 text-green-300' : 'bg-red-900/40 border-red-500 text-red-300'}`}>
-            ⚡ {credits} credits
-          </div>
-          <a
-            href={`mailto:ewilliamhe@gmail.com?subject=Credit Request - Ouriye&body=Hi, I'd like to purchase more credits for my Ouriye account (user email on file). Current credits: ${credits}.`}
-            className="px-3 py-2 bg-yellow-500/20 border border-yellow-500 text-yellow-300 text-xs rounded-lg hover:bg-yellow-500/30 transition-colors"
-          >
-            + Buy Credits
-          </a>
-        </div>
-      </div>
-
-      {/* Mode toggle */}
-      <div className="flex rounded-xl overflow-hidden border border-purple-700/50 w-fit">
-        <button
-          onClick={() => setMode('panel')}
-          className={`px-6 py-3 text-sm font-bold transition-all ${mode === 'panel'
-            ? 'bg-purple-600 text-white'
-            : 'bg-white/5 text-purple-300 hover:bg-white/10'}`}
-        >
-          🖼️ Manga Panel
-          <span className="ml-2 text-xs opacity-70">3 credits</span>
-        </button>
-        <button
-          onClick={() => setMode('clip')}
-          className={`px-6 py-3 text-sm font-bold transition-all ${mode === 'clip'
-            ? 'bg-blue-600 text-white'
-            : 'bg-white/5 text-blue-300 hover:bg-white/10'}`}
-        >
-          🎬 Anime Clip
-          <span className="ml-2 text-xs opacity-70">{costClip} credits</span>
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* ── LEFT: Reference Library ── */}
-        <div className="flex flex-col gap-3">
-          <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-purple-200">📚 Reference Tags</h3>
-              <span className="text-xs text-white/30">type @ to insert</span>
+    <div className="flex h-full w-full bg-transparent overflow-hidden text-white font-sans">
+      
+      {/* DIRECTOR'S CHAIR */}
+      <aside className="w-80 border-r border-white/5 bg-void flex flex-col shadow-2xl z-10 relative">
+        <div className="p-6 pb-0 flex flex-col gap-4 border-b border-white/5">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-display font-bold gradient-text tracking-wide flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-plasma" />
+              Manga Studio
+            </h2>
+            <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 shadow-inner" title="Available Credits">
+              <Coins className="w-4 h-4 text-yellow-400" />
+              <span className="text-xs font-bold text-white">{credits}</span>
             </div>
+          </div>
 
-            {refsLoading ? (
-              <div className="text-xs text-white/30 italic py-4 text-center">Loading…</div>
-            ) : references.length === 0 ? (
-              <div className="text-xs text-white/30 italic py-4 text-center">
-                No references yet.<br />Upload images in the References tab.
+          <div className="flex gap-6 mt-2">
+            <button onClick={() => setActiveTab('prompt')} className={`pb-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'prompt' ? 'border-plasma text-white' : 'border-transparent text-gray-600 hover:text-gray-400'}`}>
+              Settings
+            </button>
+            <button onClick={() => setActiveTab('references')} className={`pb-3 text-sm font-medium border-b-2 transition-all flex items-center gap-2 ${activeTab === 'references' ? 'border-plasma text-white' : 'border-transparent text-gray-600 hover:text-gray-400'}`}>
+              Characters {references.length > 0 && <span className="bg-white/10 text-xs py-0.5 px-2 rounded-full">{references.length}</span>}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {activeTab === 'prompt' && (
+            <div className="space-y-8 animate-in fade-in duration-300">
+              <div className="space-y-3">
+                <label className="text-xs text-gray-500 font-bold uppercase tracking-widest">Art Style</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => setIsColored(false)} className={`p-4 rounded-xl border transition-all flex flex-col items-center gap-2 ${!isColored ? 'bg-plasma/10 border-plasma text-plasma shadow-[0_0_20px_rgba(var(--color-plasma),0.1)]' : 'bg-transparent border-white/5 text-gray-500 hover:bg-white/5'}`}>
+                    <Paintbrush className="w-6 h-6" />
+                    <span className="text-xs font-bold">B&W Ink</span>
+                  </button>
+                  <button onClick={() => setIsColored(true)} className={`p-4 rounded-xl border transition-all flex flex-col items-center gap-2 ${isColored ? 'bg-bloom/10 border-bloom text-bloom shadow-[0_0_20px_rgba(var(--color-bloom),0.1)]' : 'bg-transparent border-white/5 text-gray-500 hover:bg-white/5'}`}>
+                    <Paintbrush className="w-6 h-6" />
+                    <span className="text-xs font-bold">Full Color</span>
+                  </button>
+                </div>
               </div>
-            ) : (
-              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
-                {references.map((r) => {
-                  const getCategoryIcon = (cat?: string) => {
-                    switch (cat) {
-                      case 'character': return '👤';
-                      case 'animal': return '🐾';
-                      case 'scene': return '🏞️';
-                      default: return '📦';
-                    }
-                  };
-                  return (
-                    <button
-                      key={r.id}
-                      onClick={() => setPrompt((p) => p + (p.endsWith(' ') || p === '' ? '' : ' ') + `@${r.tag} `)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/40 transition-all text-left group"
-                      title={`Click to insert @${r.tag}`}
-                    >
-                      {r.type === 'image' ? (
-                        <img src={r.file_url} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />
-                      ) : (
-                        <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center text-xs flex-shrink-0">
-                          {r.type === 'video' ? '🎬' : r.type === 'pdf' ? '📄' : '📝'}
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <div className="text-xs font-mono font-bold text-purple-300 group-hover:text-purple-200">
-                          @{r.tag}
-                        </div>
-                        <div className="text-xs text-white/40 truncate">{r.name}</div>
-                      </div>
-                      <div className="ml-auto flex items-center gap-2">
-                        <span className="text-xs text-white/50">{getCategoryIcon(r.category)}</span>
-                        <div className="text-white/20 group-hover:text-purple-400 text-xs">+</div>
-                      </div>
+
+              <div className="space-y-3">
+                <label className="text-xs text-gray-500 font-bold uppercase tracking-widest">Aspect Ratio</label>
+                <div className="flex gap-2 p-1 bg-white/5 rounded-lg border border-white/5">
+                  {['portrait', 'square', 'landscape'].map(ratio => (
+                    <button key={ratio} onClick={() => setAspectRatio(ratio)} className={`flex-1 py-2 text-xs rounded-md transition-all ${aspectRatio === ratio ? 'bg-surface text-white shadow-md' : 'text-gray-500 hover:text-white'}`}>
+                      {ratio.charAt(0).toUpperCase() + ratio.slice(1)}
                     </button>
-                  );
-                })}
-              </div>
-            )}
-
-            <p className="text-xs text-white/25 mt-3 leading-relaxed">
-              Tag names are auto-derived from file names.<br />
-              <span className="text-purple-400">@hugo</span> → injects Hugo's image as a reference for character consistency.
-            </p>
-          </div>
-
-          {/* Tag syntax guide */}
-          <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-            <h3 className="text-sm font-semibold text-purple-200 mb-2">💡 Tag Syntax</h3>
-            <div className="space-y-1.5 text-xs text-white/50">
-              <div><span className="text-purple-300 font-mono">@hugo</span> — character reference</div>
-              <div><span className="text-purple-300 font-mono">@gloriasroom</span> — location reference</div>
-              <div><span className="text-purple-300 font-mono">@scene1</span> — scene reference</div>
-              <div><span className="text-purple-300 font-mono">@forest</span> — background/environment</div>
-              <div className="pt-1 text-white/30 italic">Tags auto-inject as reference images.<br />Use spaces between multiple tags.</div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── MIDDLE: Prompt + Controls ── */}
-        <div className="flex flex-col gap-4">
-
-          {/* Prompt with @mention */}
-          <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-            <label className="block text-sm font-semibold text-purple-200 mb-2">
-              ✍️ Prompt
-              <span className="text-xs font-normal text-white/40 ml-2">type @ to reference a character, place, or scene</span>
-            </label>
-            <div className="rounded-lg bg-white/5 border border-white/15 px-3 py-2 focus-within:border-purple-500/60 transition-colors">
-              <MentionTextarea
-                value={prompt}
-                onChange={setPrompt}
-                references={references}
-                placeholder={mode === 'panel'
-                  ? '@hugo stands at the edge of a cliff in @gloriasroom, rain pouring down, katana raised…'
-                  : '@hugo and @villaincharacter face off in @burningtemple, cherry blossoms swirling…'}
-                rows={5}
-                className="w-full bg-transparent placeholder-white/20 outline-none"
-              />
-            </div>
-            {/* Show which @mentions are resolved */}
-            {prompt.includes('@') && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {Array.from(prompt.matchAll(/@([a-zA-Z0-9]+)/g)).map((m, i) => {
-                  const tag = m[1].toLowerCase();
-                  const ref = references.find((r) => r.tag === tag);
-                  return (
-                    <span
-                      key={i}
-                      className={`text-xs px-2 py-0.5 rounded-full font-mono ${ref ? 'bg-purple-600/30 text-purple-300 border border-purple-500/40' : 'bg-red-600/20 text-red-400 border border-red-500/30'}`}
-                    >
-                      @{tag} {ref ? '✓' : '✗ not found'}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Style presets (panel only) */}
-          {mode === 'panel' && (
-            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-              <label className="block text-sm font-semibold text-purple-200 mb-3">🎨 Style Preset</label>
-              <div className="flex flex-wrap gap-2">
-                {STYLE_PRESETS.map((preset) => (
-                  <button
-                    key={preset.value}
-                    onClick={() => setPanelStyle(preset.value)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${panelStyle === preset.value
-                      ? 'bg-purple-600 border-purple-400 text-white'
-                      : 'bg-white/5 border-white/10 text-purple-300 hover:bg-white/10'}`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Settings */}
-          <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-            <label className="block text-sm font-semibold text-purple-200 mb-3">⚙️ Settings</label>
-            <div className="grid grid-cols-2 gap-3">
-              {mode === 'panel' ? (
-                <>
-                  <div>
-                    <label className="block text-xs text-white/50 mb-1">Resolution</label>
-                    <select
-                      value={panelRes}
-                      onChange={(e) => setPanelRes(e.target.value as PanelResolution)}
-                      className="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white border border-white/20 outline-none"
-                    >
-                      <option value="1K">1K (fast)</option>
-                      <option value="2K">2K (default)</option>
-                      <option value="4K">4K (best)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-white/50 mb-1">Aspect Ratio</label>
-                    <select
-                      value={panelAspect}
-                      onChange={(e) => setPanelAspect(e.target.value as AspectRatioPanel)}
-                      className="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white border border-white/20 outline-none"
-                    >
-                      <option value="portrait">Portrait (2:3) — manga page</option>
-                      <option value="landscape">Landscape (3:2) — wide panel</option>
-                      <option value="square">Square (1:1) — social</option>
-                    </select>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-xs text-white/50 mb-1">Duration: {clipDuration}s</label>
-                    <input
-                      type="range"
-                      min={3}
-                      max={15}
-                      step={1}
-                      value={clipDuration}
-                      onChange={(e) => setClipDuration(Number(e.target.value))}
-                      className="w-full accent-blue-500"
-                    />
-                    <div className="flex justify-between text-xs text-white/30 mt-1">
-                      <span>3s</span><span>15s</span>
+          {activeTab === 'references' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
+              
+              <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-3 bg-white/[0.02] hover:bg-white/[0.05] hover:border-plasma/50 transition-all cursor-pointer group">
+                {isUploading ? <Loader2 className="w-8 h-8 text-plasma animate-spin" /> : (
+                  <>
+                    <div className="p-3 bg-white/5 rounded-full group-hover:scale-110 transition-transform">
+                      <UploadCloud className="w-6 h-6 text-plasma" />
                     </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">Upload Character</p>
+                      <p className="text-xs text-gray-500 mt-1">Images will be locked into the AI</p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs text-gray-500 font-bold uppercase tracking-widest flex items-center gap-2">
+                  <Users className="w-4 h-4" /> Cast Locker
+                </label>
+                {references.length === 0 ? (
+                  <div className="p-4 bg-white/5 border border-white/5 rounded-xl text-xs text-gray-500 text-center leading-relaxed">
+                    No characters uploaded. Upload an image above to lock them into your generations.
                   </div>
-                  <div>
-                    <label className="block text-xs text-white/50 mb-1">Resolution</label>
-                    <select
-                      value={clipRes}
-                      onChange={(e) => setClipRes(e.target.value as ClipResolution)}
-                      className="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white border border-white/20 outline-none"
-                    >
-                      <option value="480p">480p (fast)</option>
-                      <option value="720p">720p (balanced)</option>
-                      <option value="1080p">1080p (premium)</option>
-                    </select>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {references.map((ref, idx) => {
+                      const isSelected = selectedRefs.some(r => r.url === ref.url);
+                      return (
+                        <div key={idx} onClick={() => toggleReference(ref)} className={`relative group rounded-xl overflow-hidden border-2 cursor-pointer transition-all aspect-square ${isSelected ? 'border-plasma shadow-[0_0_15px_rgba(var(--color-plasma),0.4)]' : 'border-transparent hover:border-white/20'}`}>
+                          <img src={ref.url} alt={ref.name} className="w-full h-full object-cover" />
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2 pt-6">
+                            <p className="text-xs font-bold truncate text-white">@{ref.name}</p>
+                          </div>
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 bg-plasma text-white rounded-full p-0.5 shadow-lg">
+                              <CheckCircle2 className="w-4 h-4" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div>
-                    <label className="block text-xs text-white/50 mb-1">Aspect Ratio</label>
-                    <select
-                      value={clipAspect}
-                      onChange={(e) => setClipAspect(e.target.value as AspectRatioClip)}
-                      className="w-full bg-white/10 rounded-lg px-3 py-2 text-sm text-white border border-white/20 outline-none"
-                    >
-                      <option value="16:9">16:9 — Widescreen</option>
-                      <option value="9:16">9:16 — Vertical</option>
-                      <option value="1:1">1:1 — Square</option>
-                      <option value="4:3">4:3 — Classic</option>
-                      <option value="adaptive">Adaptive — Auto</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2 pt-4">
-                    <input
-                      type="checkbox"
-                      id="clipAudio"
-                      checked={clipAudio}
-                      onChange={(e) => setClipAudio(e.target.checked)}
-                      className="accent-blue-500 w-4 h-4"
-                    />
-                    <label htmlFor="clipAudio" className="text-sm text-white/70">
-                      🎵 Generate audio
-                    </label>
-                  </div>
-                </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* CANVAS */}
+      <main className="flex-1 relative overflow-y-auto speed-lines flex flex-col items-center scroll-smooth">
+        <div className="w-full max-w-7xl p-8 pb-56">
+          {generatedPanels.length === 0 && !isGenerating ? (
+            <div className="h-[60vh] flex flex-col items-center justify-center text-gray-600 space-y-4">
+              <ImageIcon className="w-20 h-20 opacity-10" />
+              <p className="text-sm uppercase tracking-widest font-medium">The Studio is ready. Describe your scene.</p>
+            </div>
+          ) : (
+            <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
+              {isGenerating && (
+                <div className="break-inside-avoid w-full aspect-[2/3] rounded-2xl shimmer border border-white/10" />
               )}
-            </div>
-          </div>
-
-          {/* Progress */}
-          {loading && (
-            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-white/70">{progressLabel}</span>
-                <span className="text-sm font-bold text-white">{Math.round(progress)}%</span>
-              </div>
-              <div className="w-full bg-white/10 rounded-full h-2">
-                <div
-                  className="h-2 rounded-full transition-all duration-300"
-                  style={{
-                    width: `${progress}%`,
-                    background: mode === 'panel'
-                      ? 'linear-gradient(90deg, #9333ea, #db2777)'
-                      : 'linear-gradient(90deg, #3b82f6, #06b6d4)',
-                  }}
-                />
-              </div>
+              {generatedPanels.map((url, i) => (
+                <div key={i} className="break-inside-avoid rounded-2xl overflow-hidden group relative border border-white/5 shadow-2xl transition-transform hover:-translate-y-1">
+                  <img src={url} alt={`Generated panel ${i}`} className="w-full h-auto object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all flex flex-col justify-end p-5">
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => publishToCommunity(url, prompt || "Manga Panel", "manga-pictures")}
+                        className="px-3 py-2 bg-plasma/20 hover:bg-plasma/40 rounded-lg backdrop-blur-md text-plasma border border-plasma/30 text-[10px] font-bold"
+                      >
+                        Publish to Feed
+                      </button>
+                      <a href={url} download target="_blank" className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-md text-white text-[10px] font-bold border border-white/10">
+                        Download
+                      </a>
+                    </div>
+                  </div>
+                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => handleSaveAsReference(url)}
+                      className="p-2 bg-black/50 hover:bg-black/70 rounded-full backdrop-blur-md text-white border border-white/10"
+                      title="Save as Character Reference"
+                    >
+                      <BookmarkPlus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-
-          {/* Error */}
-          {error && (
-            <div className="bg-red-900/30 border border-red-500/50 rounded-xl p-4 text-red-300 text-sm">
-              ⚠️ {error}
-            </div>
-          )}
-
-          {/* Generate button */}
-          <button
-            onClick={handleGenerate}
-            disabled={loading || !canAfford}
-            className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
-              loading
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : !canAfford
-                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                : mode === 'panel'
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 shadow-lg shadow-purple-900/50'
-                : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500 shadow-lg shadow-blue-900/50'
-            }`}
-          >
-            {loading
-              ? '✨ Generating…'
-              : !canAfford
-              ? `⚡ Need ${currentCost} credits`
-              : mode === 'panel'
-              ? `🎨 Generate Panel — ${currentCost} credits`
-              : `🎬 Generate Clip — ${currentCost} credits`}
-          </button>
-
-          {/* Model info */}
-          <p className="text-xs text-white/25 text-center">
-            {mode === 'panel'
-              ? "Powered by Google's Nano Banana Pro (Gemini 3 Image). Up to 14 reference images. @mentions auto-inject as references."
-              : "Powered by ByteDance Seedance 2.0. Up to 15s, 1080p, native audio. @mentions auto-inject as character references."}
-          </p>
         </div>
 
-        {/* ── RIGHT: Preview + Gallery ── */}
-        <div className="flex flex-col gap-4">
-
-          {/* Large preview */}
-          <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden aspect-[3/4] flex items-center justify-center">
-            {selected ? (
-              selected.type === 'panel' ? (
-                <img
-                  src={selected.url}
-                  alt="Generated manga panel"
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <video
-                  src={selected.url}
-                  controls
-                  autoPlay
-                  loop
-                  className="w-full h-full object-contain"
-                />
-              )
-            ) : (
-              <div className="text-center p-8">
-                <div className="text-6xl mb-4">🎨</div>
-                <p className="text-white/30 text-sm">Your generation will appear here</p>
-                <p className="text-white/20 text-xs mt-2">Upload references → tag them → generate</p>
-              </div>
-            )}
-          </div>
-
-          {/* Selected item prompt */}
-          {selected && (
-            <div className="bg-white/5 rounded-xl p-3 border border-white/10 text-xs text-white/50 leading-relaxed">
-              <span className="text-purple-400 font-semibold text-xs">Prompt used: </span>
-              {selected.prompt}
+        {/* BOTTOM PROMPT BAR */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-4 z-30">
+          <div className="bg-void/90 backdrop-blur-2xl border border-white/10 rounded-2xl p-2 shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
+            
+            {/* Engine Toggle Row */}
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5">
+              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Engine:</span>
+              <button onClick={() => setProvider('hf')} className={`text-xs px-2 py-1 rounded transition-all ${provider === 'hf' ? 'bg-white/10 text-white font-medium' : 'text-gray-500 hover:text-gray-300'}`}>
+                Standard HF (1 Cr)
+              </button>
+              <button onClick={() => setProvider('banana')} className={`text-xs px-2 py-1 rounded transition-all flex items-center gap-1 ${provider === 'banana' ? 'bg-plasma/20 text-plasma font-medium border border-plasma/30' : 'text-gray-500 hover:text-gray-300'}`}>
+                Premium Banana (3 Cr)
+              </button>
             </div>
-          )}
 
-          {/* Gallery */}
-          {gallery.length > 0 && (
-            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-              <h3 className="text-sm font-semibold text-purple-200 mb-3">📁 Session Gallery</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {gallery.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelected(item)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                      selected?.id === item.id
-                        ? 'border-purple-500 scale-105'
-                        : 'border-transparent hover:border-white/30'
-                    }`}
-                  >
-                    {item.type === 'panel' ? (
-                      <img src={item.url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-blue-900/40 flex items-center justify-center text-2xl">
-                        🎬
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Reference images used */}
-          {imageRefs.length > 0 && (
-            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-              <h3 className="text-sm font-semibold text-purple-200 mb-2">🔗 Your Image References</h3>
-              <div className="grid grid-cols-4 gap-1.5">
-                {imageRefs.map((r) => (
-                  <div key={r.id} className="relative group" title={`@${r.tag}`}>
-                    <img src={r.file_url} alt={r.name} className="w-full aspect-square rounded object-cover" />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-end justify-center pb-1">
-                      <span className="text-white text-xs font-mono">@{r.tag}</span>
-                    </div>
+            {selectedRefs.length > 0 && (
+              <div className="flex flex-wrap gap-2 px-3 pt-3 pb-1 border-b border-white/5">
+                {selectedRefs.map(ref => (
+                  <div key={ref.url} className="flex items-center gap-1.5 bg-plasma/10 border border-plasma/30 text-plasma px-2 py-1 rounded-lg text-xs font-medium animate-in fade-in zoom-in-95 duration-200">
+                    <img src={ref.url} alt={ref.name} className="w-5 h-5 rounded object-cover shadow-sm" />
+                    <span>@{ref.name}</span>
+                    <button onClick={() => toggleReference(ref)} className="text-plasma/60 hover:text-white ml-1 transition-colors p-0.5 rounded-md hover:bg-plasma/40">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 ))}
               </div>
+            )}
+
+            <div className="flex items-end gap-2 p-2">
+              <textarea 
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleGenerate();
+                  }
+                }}
+                placeholder="Imagine a hyper-detailed cyberpunk city in the rain... (Press Enter to generate)"
+                className="w-full bg-transparent border-none p-3 text-sm text-white focus:ring-0 outline-none resize-none max-h-32 min-h-[48px] placeholder:text-gray-600"
+                rows={1}
+              />
+              <button onClick={handleGenerate} disabled={isGenerating || !prompt.trim()} className="p-3.5 rounded-xl bg-plasma text-white btn-glow disabled:opacity-50 disabled:shadow-none flex-shrink-0 transition-all active:scale-95">
+                {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </button>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

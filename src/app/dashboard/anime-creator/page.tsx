@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
-import GenerationStudio from '@/components/dashboard/GenerationStudio';
+import VideoEditor from '@/components/editors/VideoEditor';
 
-export default async function DashboardPage() {
+export default async function VideoEditorPage() {
   const { userId } = await auth();
 
   if (!userId) {
@@ -25,8 +25,8 @@ export default async function DashboardPage() {
   const initialCredits = user?.credits || 0;
 
   return (
-    <div className="min-h-screen bg-[#030305]">
-      <GenerationStudio initialCredits={initialCredits} />
+    <div className="h-full w-full bg-transparent">
+      <VideoEditor initialCredits={initialCredits} />
     </div>
   );
 }

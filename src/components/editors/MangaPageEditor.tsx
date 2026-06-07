@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
+import { Plus, Trash2, Layout, Settings2, Download } from 'lucide-react';
 
 /* ─── Types ──────────────────────────────────────────────── */
 type PanelSize = 'full' | 'half-h' | 'half-v' | 'quarter' | 'wide' | 'tall';
@@ -10,7 +11,6 @@ interface Panel {
   imageUrl: string;
   caption: string;
   order: number;
-  size: PanelSize;
   sceneName: string;
 }
 
@@ -22,499 +22,321 @@ interface Page {
   readingDir: 'ltr' | 'rtl';
 }
 
-type LayoutPreset =
-  | '2x2'
-  | '1+2'
-  | '2+1'
-  | 'manga-5'
-  | 'splash'
-  | 'widescreen'
-  | 'classic-3';
+type LayoutPreset = '2x2' | '1+2' | '2+1' | 'manga-5' | 'splash' | 'widescreen' | 'classic-3';
 
 /* ─── Layout configs ─────────────────────────────────────── */
 interface LayoutConfig {
   name: string;
-  icon: string;
   slots: { col: string; row: string; label: string }[];
 }
 
 const LAYOUTS: Record<LayoutPreset, LayoutConfig> = {
-  '2x2': {
-    name: '2×2 Grid',
-    icon: '⊞',
-    slots: [
-      { col: 'col-span-1', row: 'row-span-1', label: 'Top Left' },
-      { col: 'col-span-1', row: 'row-span-1', label: 'Top Right' },
-      { col: 'col-span-1', row: 'row-span-1', label: 'Bottom Left' },
-      { col: 'col-span-1', row: 'row-span-1', label: 'Bottom Right' },
-    ],
-  },
-  '1+2': {
-    name: 'Big Top',
-    icon: '▬▭▭',
-    slots: [
-      { col: 'col-span-2', row: 'row-span-1', label: 'Full Width Top' },
-      { col: 'col-span-1', row: 'row-span-1', label: 'Bottom Left' },
-      { col: 'col-span-1', row: 'row-span-1', label: 'Bottom Right' },
-    ],
-  },
-  '2+1': {
-    name: 'Big Bottom',
-    icon: '▭▭▬',
-    slots: [
-      { col: 'col-span-1', row: 'row-span-1', label: 'Top Left' },
-      { col: 'col-span-1', row: 'row-span-1', label: 'Top Right' },
-      { col: 'col-span-2', row: 'row-span-1', label: 'Full Width Bottom' },
-    ],
-  },
-  'manga-5': {
-    name: 'Manga 5-Panel',
-    icon: '田',
-    slots: [
-      { col: 'col-span-1', row: 'row-span-2', label: 'Left Strip' },
-      { col: 'col-span-1', row: 'row-span-1', label: 'Top Right' },
-      { col: 'col-span-1', row: 'row-span-1', label: 'Mid Right' },
-      { col: 'col-span-2', row: 'row-span-1', label: 'Bottom Span' },
-    ],
-  },
-  'splash': {
-    name: 'Splash Page',
-    icon: '⬜',
-    slots: [
-      { col: 'col-span-2', row: 'row-span-3', label: 'Full Page' },
-    ],
-  },
-  'widescreen': {
-    name: 'Cinematic',
-    icon: '▬',
-    slots: [
-      { col: 'col-span-2', row: 'row-span-1', label: 'Wide Top' },
-      { col: 'col-span-2', row: 'row-span-1', label: 'Wide Mid' },
-      { col: 'col-span-2', row: 'row-span-1', label: 'Wide Bottom' },
-    ],
-  },
-  'classic-3': {
-    name: 'Classic Strip',
-    icon: '≡',
-    slots: [
-      { col: 'col-span-2', row: 'row-span-1', label: 'Panel 1' },
-      { col: 'col-span-2', row: 'row-span-1', label: 'Panel 2' },
-      { col: 'col-span-2', row: 'row-span-1', label: 'Panel 3' },
-    ],
-  },
+  '2x2': { name: '2×2 Grid', slots: [{ col: 'col-span-1', row: 'row-span-1', label: '1' }, { col: 'col-span-1', row: 'row-span-1', label: '2' }, { col: 'col-span-1', row: 'row-span-1', label: '3' }, { col: 'col-span-1', row: 'row-span-1', label: '4' }] },
+  '1+2': { name: 'Big Top', slots: [{ col: 'col-span-2', row: 'row-span-1', label: '1' }, { col: 'col-span-1', row: 'row-span-1', label: '2' }, { col: 'col-span-1', row: 'row-span-1', label: '3' }] },
+  '2+1': { name: 'Big Bottom', slots: [{ col: 'col-span-1', row: 'row-span-1', label: '1' }, { col: 'col-span-1', row: 'row-span-1', label: '2' }, { col: 'col-span-2', row: 'row-span-1', label: '3' }] },
+  'manga-5': { name: 'Manga 5-Panel', slots: [{ col: 'col-span-1', row: 'row-span-2', label: '1' }, { col: 'col-span-1', row: 'row-span-1', label: '2' }, { col: 'col-span-1', row: 'row-span-1', label: '3' }, { col: 'col-span-2', row: 'row-span-1', label: '4' }] },
+  'splash': { name: 'Splash Page', slots: [{ col: 'col-span-2', row: 'row-span-3', label: '1 (Full)' }] },
+  'widescreen': { name: 'Cinematic', slots: [{ col: 'col-span-2', row: 'row-span-1', label: '1' }, { col: 'col-span-2', row: 'row-span-1', label: '2' }, { col: 'col-span-2', row: 'row-span-1', label: '3' }] },
+  'classic-3': { name: 'Classic Strip', slots: [{ col: 'col-span-2', row: 'row-span-1', label: '1' }, { col: 'col-span-2', row: 'row-span-1', label: '2' }, { col: 'col-span-2', row: 'row-span-1', label: '3' }] },
 };
 
 /* ─── Demo data ──────────────────────────────────────────── */
 const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
-    <rect width="400" height="300" fill="#1f2937"/>
-    <text x="200" y="150" text-anchor="middle" fill="#374151" font-family="sans-serif" font-size="16">Panel</text>
+    <rect width="400" height="300" fill="#1f2937"/><text x="200" y="150" text-anchor="middle" fill="#374151" font-family="sans-serif" font-size="16">Panel</text>
   </svg>
 `);
 
 const DEMO_PANELS: Panel[] = [
-  { id: 'p1', imageUrl: PLACEHOLDER, caption: 'The sun rises over the village...', order: 1, size: 'full', sceneName: 'Scene 1' },
-  { id: 'p2', imageUrl: PLACEHOLDER, caption: 'She stands at the threshold.', order: 2, size: 'half-h', sceneName: 'Scene 2' },
-  { id: 'p3', imageUrl: PLACEHOLDER, caption: 'A lone traveller on the road.', order: 3, size: 'half-h', sceneName: 'Scene 3' },
-  { id: 'p4', imageUrl: PLACEHOLDER, caption: '"I will return," he said.', order: 4, size: 'quarter', sceneName: 'Scene 4' },
-  { id: 'p5', imageUrl: PLACEHOLDER, caption: 'The letter arrived at dawn.', order: 5, size: 'quarter', sceneName: 'Scene 5' },
-  { id: 'p6', imageUrl: PLACEHOLDER, caption: 'Years pass like seasons.', order: 6, size: 'full', sceneName: 'Scene 6' },
+  { id: 'p1', imageUrl: PLACEHOLDER, caption: 'The sun rises over the village...', order: 1, sceneName: 'Scene 1' },
+  { id: 'p2', imageUrl: PLACEHOLDER, caption: 'She stands at the threshold.', order: 2, sceneName: 'Scene 2' },
+  { id: 'p3', imageUrl: PLACEHOLDER, caption: 'A lone traveller on the road.', order: 3, sceneName: 'Scene 3' },
+  { id: 'p4', imageUrl: PLACEHOLDER, caption: '"I will return," he said.', order: 4, sceneName: 'Scene 4' },
 ];
 
 function makeBlankPage(n: number): Page {
-  return {
-    id: `pg${n}`,
-    title: `Page ${n}`,
-    panels: [],
-    layout: '2x2',
-    readingDir: 'ltr',
-  };
-}
-
-/* ─── Panel slot component ───────────────────────────────── */
-function PanelSlot({
-  panel,
-  slotLabel,
-  order,
-  isSelected,
-  onSelect,
-  onDrop,
-  isDragOver,
-  onDragOver,
-  onDragLeave,
-}: {
-  panel?: Panel;
-  slotLabel: string;
-  order: number;
-  isSelected: boolean;
-  onSelect: () => void;
-  onDrop: (e: React.DragEvent) => void;
-  isDragOver: boolean;
-  onDragOver: (e: React.DragEvent) => void;
-  onDragLeave: () => void;
-}) {
-  return (
-    <div
-      onClick={onSelect}
-      onDrop={onDrop}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      style={{ border: isSelected ? '2px solid #a855f7' : isDragOver ? '2px dashed #60a5fa' : '1px solid #374151' }}
-      className={`relative rounded overflow-hidden cursor-pointer transition group ${
-        isDragOver ? 'bg-blue-900/30' : 'bg-gray-900'
-      }`}
-    >
-      {panel ? (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={panel.imageUrl} alt={panel.sceneName} className="w-full h-full object-cover" />
-          {/* Reading order badge */}
-          <div className="absolute top-1 left-1 w-6 h-6 rounded-full bg-black/80 flex items-center justify-center text-xs font-bold text-white border border-purple-500">
-            {order}
-          </div>
-          {/* Caption overlay */}
-          {panel.caption && (
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent px-2 pt-4 pb-1">
-              <p className="text-xs text-white leading-snug">{panel.caption}</p>
-            </div>
-          )}
-          {/* Scene name badge */}
-          <div className="absolute top-1 right-1 bg-black/70 text-xs text-gray-300 px-1 rounded opacity-0 group-hover:opacity-100 transition">
-            {panel.sceneName}
-          </div>
-        </>
-      ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center min-h-[100px]">
-          <div className="text-2xl text-gray-700 mb-1">+</div>
-          <p className="text-xs text-gray-700">{slotLabel}</p>
-          <p className="text-xs text-gray-800 mt-1">Drop panel here</p>
-        </div>
-      )}
-    </div>
-  );
+  return { id: `pg${Date.now()}_${n}`, title: `Page ${n}`, panels: [], layout: '2x2', readingDir: 'ltr' };
 }
 
 /* ─── Main component ─────────────────────────────────────── */
 export default function MangaPageEditor({ projectId }: { projectId: string }) {
   const [pages, setPages] = useState<Page[]>([
     { ...makeBlankPage(1), panels: DEMO_PANELS.slice(0, 4), layout: '2x2' },
-    { ...makeBlankPage(2), panels: DEMO_PANELS.slice(4, 6), layout: 'widescreen' },
+    { ...makeBlankPage(2), panels: [], layout: 'splash' },
   ]);
-  const [currentPageIdx, setCurrentPageIdx] = useState(0);
   const [availablePanels] = useState<Panel[]>(DEMO_PANELS);
+  
+  // Selection State for Properties Sidebar
+  const [selectedPageIdx, setSelectedPageIdx] = useState<number | null>(null);
   const [selectedSlotIdx, setSelectedSlotIdx] = useState<number | null>(null);
-  const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
-  const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
-  const [editingCaption, setEditingCaption] = useState<string | null>(null);
 
-  const page = pages[currentPageIdx];
-  const layout = LAYOUTS[page.layout];
-  const slots = layout.slots;
+  // Drag State
+  const [dragOverInfo, setDragOverInfo] = useState<{pageIdx: number, slotIdx: number} | null>(null);
 
-  const updatePage = (patch: Partial<Page>) => {
-    setPages(prev => prev.map((p, i) => i === currentPageIdx ? { ...p, ...patch } : p));
+  /* --- Helpers --- */
+  const updatePage = (pageIdx: number, patch: Partial<Page>) => {
+    setPages(prev => prev.map((p, i) => i === pageIdx ? { ...p, ...patch } : p));
   };
 
-  const setSlotPanel = (slotIdx: number, panel: Panel | undefined) => {
-    const newPanels = [...page.panels];
-    if (panel) {
-      newPanels[slotIdx] = { ...panel, order: slotIdx + 1 };
-    } else {
-      newPanels[slotIdx] = undefined as unknown as Panel;
-    }
-    updatePage({ panels: newPanels.filter(Boolean) });
+  const getPanelAtSlot = (pageIdx: number, slotIdx: number): Panel | undefined => {
+    return pages[pageIdx].panels.find(p => p.order === slotIdx + 1);
   };
 
-  const getPanelAtSlot = (slotIdx: number): Panel | undefined => {
-    // Map panels to slots by their order (1-indexed → 0-indexed)
-    return page.panels.find(p => p.order === slotIdx + 1);
-  };
-
-  /* drag from library */
+  /* --- Drag and Drop Logic --- */
   const onLibraryDragStart = (e: React.DragEvent, panel: Panel) => {
-    setDraggingPanelId(panel.id);
+    e.dataTransfer.setData('source', 'library');
     e.dataTransfer.setData('panelId', panel.id);
   };
 
-  const onSlotDrop = (e: React.DragEvent, slotIdx: number) => {
-    e.preventDefault();
-    const panelId = e.dataTransfer.getData('panelId');
-    const panel = availablePanels.find(p => p.id === panelId);
+  const onSlotDragStart = (e: React.DragEvent, pageIdx: number, slotIdx: number) => {
+    const panel = getPanelAtSlot(pageIdx, slotIdx);
     if (panel) {
-      const assignedPanels = [...page.panels.filter(p => p.order !== slotIdx + 1)];
-      assignedPanels.push({ ...panel, order: slotIdx + 1 });
-      assignedPanels.sort((a, b) => a.order - b.order);
-      updatePage({ panels: assignedPanels });
-    }
-    setDragOverSlot(null);
-    setDraggingPanelId(null);
-  };
-
-  /* reorder via drag between slots */
-  const onSlotDragStart = (e: React.DragEvent, slotIdx: number) => {
-    const panel = getPanelAtSlot(slotIdx);
-    if (panel) {
-      e.dataTransfer.setData('slotPanelId', panel.id);
+      e.dataTransfer.setData('source', 'slot');
+      e.dataTransfer.setData('panelId', panel.id);
+      e.dataTransfer.setData('fromPage', String(pageIdx));
       e.dataTransfer.setData('fromSlot', String(slotIdx));
     }
   };
 
-  const onSlotDropReorder = (e: React.DragEvent, toSlot: number) => {
+  const onSlotDrop = (e: React.DragEvent, toPageIdx: number, toSlotIdx: number) => {
     e.preventDefault();
-    const fromSlot = parseInt(e.dataTransfer.getData('fromSlot'));
-    const panelId = e.dataTransfer.getData('slotPanelId');
-    if (!isNaN(fromSlot) && panelId) {
-      const panelA = getPanelAtSlot(fromSlot);
-      const panelB = getPanelAtSlot(toSlot);
-      const newPanels = page.panels.map(p => {
-        if (p.id === panelA?.id) return { ...p, order: toSlot + 1 };
-        if (p.id === panelB?.id) return { ...p, order: fromSlot + 1 };
-        return p;
+    setDragOverInfo(null);
+    const source = e.dataTransfer.getData('source');
+    const panelId = e.dataTransfer.getData('panelId');
+
+    if (source === 'slot') {
+      const fromPage = parseInt(e.dataTransfer.getData('fromPage'));
+      const fromSlot = parseInt(e.dataTransfer.getData('fromSlot'));
+      const panelToMove = getPanelAtSlot(fromPage, fromSlot);
+      const panelAtDest = getPanelAtSlot(toPageIdx, toSlotIdx);
+
+      if (!panelToMove) return;
+
+      setPages(prev => {
+        const newPages = [...prev];
+        newPages[fromPage].panels = newPages[fromPage].panels.filter(p => p.id !== panelToMove.id);
+        
+        if (panelAtDest) {
+          newPages[toPageIdx].panels = newPages[toPageIdx].panels.filter(p => p.id !== panelAtDest.id);
+          newPages[fromPage].panels.push({ ...panelAtDest, order: fromSlot + 1 });
+        }
+        newPages[toPageIdx].panels.push({ ...panelToMove, order: toSlotIdx + 1 });
+        return newPages;
       });
-      updatePage({ panels: newPanels });
-    } else {
-      onSlotDrop(e, toSlot);
+    } else if (source === 'library') {
+      const panel = availablePanels.find(p => p.id === panelId);
+      if (panel) {
+        setPages(prev => {
+          const newPages = [...prev];
+          // Remove from destination page if it exists
+          newPages[toPageIdx].panels = newPages[toPageIdx].panels.filter(p => p.order !== toSlotIdx + 1);
+          newPages[toPageIdx].panels.push({ ...panel, order: toSlotIdx + 1 });
+          return newPages;
+        });
+      }
     }
-    setDragOverSlot(null);
   };
 
-  const addPage = () => {
-    setPages(prev => [...prev, makeBlankPage(prev.length + 1)]);
-    setCurrentPageIdx(pages.length);
-  };
+  const addPage = () => setPages(prev => [...prev, makeBlankPage(prev.length + 1)]);
+  const removePage = (idx: number) => setPages(prev => prev.filter((_, i) => i !== idx));
 
-  const removePage = (idx: number) => {
-    if (pages.length <= 1) return;
-    setPages(prev => prev.filter((_, i) => i !== idx));
-    setCurrentPageIdx(Math.max(0, idx - 1));
-  };
-
-  const selectedPanel = selectedSlotIdx !== null ? getPanelAtSlot(selectedSlotIdx) : null;
+  // Determine what to show in the right sidebar
+  const activePanel = selectedPageIdx !== null && selectedSlotIdx !== null ? getPanelAtSlot(selectedPageIdx, selectedSlotIdx) : null;
+  const activePage = selectedPageIdx !== null ? pages[selectedPageIdx] : null;
 
   return (
-    <div className="flex h-screen bg-gray-950 text-white overflow-hidden select-none">
+    <div className="flex h-screen bg-[#030305] text-white overflow-hidden select-none">
 
-      {/* ── Left: panel library ── */}
-      <aside className="w-52 bg-gray-900 border-r border-gray-800 flex flex-col shrink-0">
-        <div className="px-4 py-3 border-b border-gray-800">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Panel Library</p>
+      {/* ── Left: Panel Library ── */}
+      <aside className="w-64 bg-void border-r border-white/5 flex flex-col shrink-0 z-10 shadow-2xl">
+        <div className="px-6 py-5 border-b border-white/5 bg-black/20">
+          <h2 className="text-sm font-bold text-gray-300 uppercase tracking-widest flex items-center gap-2">
+            <Layout className="w-4 h-4 text-plasma" /> Generated Panels
+          </h2>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {availablePanels.map(panel => (
             <div
               key={panel.id}
               draggable
               onDragStart={e => onLibraryDragStart(e, panel)}
-              className="rounded-lg overflow-hidden border border-gray-700 hover:border-purple-500 cursor-grab active:cursor-grabbing transition group"
+              className="rounded-xl overflow-hidden border border-white/10 hover:border-plasma hover:shadow-[0_0_15px_rgba(124,58,237,0.3)] cursor-grab active:cursor-grabbing transition-all group bg-surface"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={panel.imageUrl} alt={panel.sceneName} className="w-full h-20 object-cover" />
-              <div className="px-2 py-1 bg-gray-800">
-                <p className="text-xs font-medium truncate">{panel.sceneName}</p>
+              <img src={panel.imageUrl} alt={panel.sceneName} className="w-full h-24 object-cover" />
+              <div className="px-3 py-2 bg-black/40 border-t border-white/5">
+                <p className="text-xs font-bold text-gray-300 truncate">{panel.sceneName}</p>
               </div>
             </div>
           ))}
         </div>
       </aside>
 
-      {/* ── Center: page canvas ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* ── Center: Vertical Scroll Canvas ── */}
+      <div className="flex-1 overflow-y-auto bg-[#030305] flex flex-col items-center py-12 px-4 gap-20 speed-lines scroll-smooth relative">
+        
+        {pages.map((page, pageIdx) => {
+          const layout = LAYOUTS[page.layout];
+          const slots = layout.slots;
 
-        {/* Page tabs */}
-        <div className="flex items-center gap-1 px-4 py-2 bg-gray-900 border-b border-gray-800 overflow-x-auto shrink-0">
-          {pages.map((p, i) => (
-            <button
-              key={p.id}
-              onClick={() => { setCurrentPageIdx(i); setSelectedSlotIdx(null); }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-t text-sm font-medium transition ${
-                i === currentPageIdx ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              📄 {p.title}
-              {pages.length > 1 && (
-                <span
-                  onClick={e => { e.stopPropagation(); removePage(i); }}
-                  className="ml-1 text-gray-600 hover:text-red-400 text-xs"
-                >✕</span>
-              )}
-            </button>
-          ))}
-          <button onClick={addPage}
-            className="px-3 py-1.5 text-gray-500 hover:text-white text-sm transition">+ Page</button>
-        </div>
-
-        {/* Layout picker */}
-        <div className="flex items-center gap-2 px-4 py-2 bg-gray-900/50 border-b border-gray-800 overflow-x-auto shrink-0">
-          <span className="text-xs text-gray-500 shrink-0">Layout:</span>
-          {(Object.entries(LAYOUTS) as [LayoutPreset, LayoutConfig][]).map(([key, cfg]) => (
-            <button
-              key={key}
-              onClick={() => updatePage({ layout: key })}
-              className={`px-3 py-1 rounded text-xs font-medium transition shrink-0 ${
-                page.layout === key ? 'bg-purple-700 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
-              }`}
-            >
-              {cfg.icon} {cfg.name}
-            </button>
-          ))}
-          <div className="flex-1" />
-          <button
-            onClick={() => updatePage({ readingDir: page.readingDir === 'ltr' ? 'rtl' : 'ltr' })}
-            className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-300 shrink-0 transition"
-          >
-            {page.readingDir === 'ltr' ? '→ L to R' : '← R to L'}
-          </button>
-        </div>
-
-        {/* Page canvas */}
-        <div className="flex-1 overflow-auto bg-gray-950 flex items-start justify-center p-8">
-          <div
-            className="bg-white shadow-2xl rounded"
-            style={{
-              width: 520,
-              aspectRatio: '2/3',
-              padding: 8,
-              direction: page.readingDir === 'rtl' ? 'rtl' : 'ltr',
-            }}
-          >
-            <div
-              className="w-full h-full grid gap-1"
-              style={{
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gridTemplateRows: `repeat(${Math.ceil(slots.length / 2) + 1}, 1fr)`,
-              }}
-            >
-              {slots.map((slot, idx) => {
-                const panel = getPanelAtSlot(idx);
-                return (
-                  <div
-                    key={idx}
-                    draggable={!!panel}
-                    onDragStart={e => onSlotDragStart(e, idx)}
-                    className={slot.col + ' ' + slot.row}
-                    style={{
-                      gridColumn: slot.col === 'col-span-2' ? 'span 2' : undefined,
-                      gridRow: slot.row === 'row-span-2' ? 'span 2' : slot.row === 'row-span-3' ? 'span 3' : undefined,
-                      minHeight: 80,
-                    }}
+          return (
+            <div key={page.id} className="w-full max-w-[560px] flex flex-col gap-3 relative animate-in fade-in slide-in-from-bottom-8 duration-500">
+              
+              {/* Floating Page Toolbar */}
+              <div className="flex items-center justify-between bg-void/80 backdrop-blur-md border border-white/10 p-3 rounded-2xl shadow-xl sticky top-4 z-20 transition-all hover:bg-void">
+                <div className="flex items-center gap-4">
+                  <span className="font-bold text-sm text-white px-2">Page {pageIdx + 1}</span>
+                  <div className="h-4 w-px bg-white/10" />
+                  <select
+                    className="bg-surface text-xs text-white rounded-lg border border-white/10 p-2 outline-none cursor-pointer focus:border-plasma transition-colors"
+                    value={page.layout}
+                    onChange={e => updatePage(pageIdx, { layout: e.target.value as LayoutPreset })}
                   >
-                    <PanelSlot
-                      panel={panel}
-                      slotLabel={slot.label}
-                      order={idx + 1}
-                      isSelected={selectedSlotIdx === idx}
-                      onSelect={() => setSelectedSlotIdx(selectedSlotIdx === idx ? null : idx)}
-                      onDrop={e => onSlotDropReorder(e, idx)}
-                      isDragOver={dragOverSlot === idx}
-                      onDragOver={e => { e.preventDefault(); setDragOverSlot(idx); }}
-                      onDragLeave={() => setDragOverSlot(null)}
-                    />
-                  </div>
-                );
-              })}
+                    {Object.entries(LAYOUTS).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}
+                  </select>
+                </div>
+                <button onClick={() => removePage(pageIdx)} className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Page Canvas Container */}
+              <div 
+                className="bg-white shadow-[0_30px_60px_rgba(0,0,0,0.6)] rounded-sm ring-1 ring-white/10 relative"
+                style={{ aspectRatio: '2/3', padding: 8, direction: page.readingDir }}
+              >
+                <div 
+                  className="w-full h-full grid gap-[6px]"
+                  style={{ gridTemplateColumns: 'repeat(2, 1fr)', gridTemplateRows: `repeat(${Math.ceil(slots.length / 2) + 1}, 1fr)` }}
+                >
+                  {slots.map((slot, slotIdx) => {
+                    const panel = getPanelAtSlot(pageIdx, slotIdx);
+                    const isSelected = selectedPageIdx === pageIdx && selectedSlotIdx === slotIdx;
+                    const isDragOver = dragOverInfo?.pageIdx === pageIdx && dragOverInfo?.slotIdx === slotIdx;
+
+                    return (
+                      <div
+                        key={slotIdx}
+                        draggable={!!panel}
+                        onDragStart={e => onSlotDragStart(e, pageIdx, slotIdx)}
+                        onDrop={e => onSlotDrop(e, pageIdx, slotIdx)}
+                        onDragOver={e => { e.preventDefault(); setDragOverInfo({ pageIdx, slotIdx }); }}
+                        onDragLeave={() => setDragOverInfo(null)}
+                        onClick={() => { setSelectedPageIdx(pageIdx); setSelectedSlotIdx(slotIdx); }}
+                        className={`${slot.col} ${slot.row} relative border-2 transition-all cursor-pointer overflow-hidden ${isSelected ? 'border-plasma z-10 shadow-[0_0_20px_rgba(124,58,237,0.5)]' : isDragOver ? 'border-blue-400 bg-blue-500/10 border-dashed' : 'border-gray-800 bg-gray-100 hover:border-gray-400'}`}
+                        style={{
+                          gridColumn: slot.col === 'col-span-2' ? 'span 2' : undefined,
+                          gridRow: slot.row === 'row-span-2' ? 'span 2' : slot.row === 'row-span-3' ? 'span 3' : undefined,
+                        }}
+                      >
+                        {panel ? (
+                          <>
+                            <img src={panel.imageUrl} alt="" className="w-full h-full object-cover" />
+                            {panel.caption && (
+                              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent pt-6 pb-2 px-3">
+                                <p className="text-[10px] text-white leading-tight font-medium">{panel.caption}</p>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center opacity-30">
+                            <Plus className="w-6 h-6 text-gray-800 mb-1" />
+                            <span className="text-[10px] font-bold text-gray-800 uppercase tracking-widest">{slot.label}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
+          );
+        })}
+
+        <button 
+          onClick={addPage}
+          className="w-full max-w-[560px] py-6 border-2 border-dashed border-white/10 rounded-2xl text-gray-500 hover:text-plasma hover:border-plasma/50 hover:bg-plasma/5 transition-all flex flex-col items-center justify-center gap-2 font-bold group"
+        >
+          <div className="p-3 bg-white/5 rounded-full group-hover:scale-110 transition-transform">
+            <Plus className="w-6 h-6" />
           </div>
-        </div>
+          Add New Page
+        </button>
       </div>
 
-      {/* ── Right: panel properties ── */}
-      <aside className="w-64 bg-gray-900 border-l border-gray-800 flex flex-col shrink-0 overflow-y-auto">
-        <div className="px-4 py-3 border-b border-gray-800">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
-            {selectedPanel ? 'Panel Properties' : 'Page Properties'}
-          </p>
+      {/* ── Right: Inspector ── */}
+      <aside className="w-72 bg-void border-l border-white/5 flex flex-col shrink-0 z-10 shadow-2xl overflow-y-auto">
+        <div className="px-6 py-5 border-b border-white/5 bg-black/20">
+          <h2 className="text-sm font-bold text-gray-300 uppercase tracking-widest flex items-center gap-2">
+            <Settings2 className="w-4 h-4 text-plasma" /> Inspector
+          </h2>
         </div>
 
-        {selectedPanel ? (
-          <div className="p-4 space-y-4">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Scene</label>
-              <p className="text-sm text-white font-medium">{selectedPanel.sceneName}</p>
+        {activePanel ? (
+          <div className="p-6 space-y-6 animate-in fade-in slide-in-from-right-4">
+            <div className="aspect-video bg-surface rounded-lg overflow-hidden border border-white/10">
+              <img src={activePanel.imageUrl} alt="" className="w-full h-full object-cover" />
             </div>
 
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Caption</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Panel Caption</label>
               <textarea
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:border-purple-500"
-                rows={3}
-                value={selectedPanel.caption}
+                className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:border-plasma focus:ring-1 focus:ring-plasma transition-all text-white"
+                rows={4}
+                placeholder="Enter dialog or narration..."
+                value={activePanel.caption}
                 onChange={e => {
-                  const newPanels = page.panels.map(p =>
-                    p.id === selectedPanel.id ? { ...p, caption: e.target.value } : p
+                  const newPanels = pages[selectedPageIdx!].panels.map(p =>
+                    p.id === activePanel.id ? { ...p, caption: e.target.value } : p
                   );
-                  updatePage({ panels: newPanels });
+                  updatePage(selectedPageIdx!, { panels: newPanels });
                 }}
               />
             </div>
 
-            <div>
-              <label className="block text-xs text-gray-400 mb-2">Reading Position</label>
-              <p className="text-xl font-bold text-purple-400 text-center">
-                #{(selectedSlotIdx ?? 0) + 1}
-              </p>
-            </div>
-
             <button
               onClick={() => {
-                const newPanels = page.panels.filter(p => p.id !== selectedPanel.id);
-                updatePage({ panels: newPanels });
+                const newPanels = pages[selectedPageIdx!].panels.filter(p => p.id !== activePanel.id);
+                updatePage(selectedPageIdx!, { panels: newPanels });
                 setSelectedSlotIdx(null);
               }}
-              className="w-full py-2 bg-red-900/40 hover:bg-red-900/60 text-red-400 text-sm rounded-lg border border-red-800 transition"
+              className="w-full py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-bold rounded-xl border border-red-500/20 transition-all"
             >
               Remove from Page
             </button>
           </div>
+        ) : activePage ? (
+          <div className="p-6 space-y-6 animate-in fade-in slide-in-from-right-4">
+             <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Page Reading Direction</label>
+              <div className="flex bg-surface rounded-lg p-1 border border-white/10">
+                <button 
+                  onClick={() => updatePage(selectedPageIdx!, { readingDir: 'ltr' })}
+                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${activePage.readingDir === 'ltr' ? 'bg-plasma text-white' : 'text-gray-500 hover:text-white'}`}
+                >L → R</button>
+                <button 
+                  onClick={() => updatePage(selectedPageIdx!, { readingDir: 'rtl' })}
+                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${activePage.readingDir === 'rtl' ? 'bg-plasma text-white' : 'text-gray-500 hover:text-white'}`}
+                >R ← L</button>
+              </div>
+            </div>
+            <div className="bg-plasma/10 border border-plasma/20 rounded-xl p-4">
+              <p className="text-xs text-plasma/90 leading-relaxed font-medium">
+                Click a layout slot on Page {selectedPageIdx! + 1} to edit its text captions and properties.
+              </p>
+            </div>
+          </div>
         ) : (
-          <div className="p-4 space-y-4">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Page Title</label>
-              <input
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
-                value={page.title}
-                onChange={e => updatePage({ title: e.target.value })}
-              />
-            </div>
-
-            <div className="bg-gray-800 rounded-lg p-3 text-xs text-gray-400 space-y-1">
-              <div className="flex justify-between">
-                <span>Layout</span>
-                <span className="text-white">{LAYOUTS[page.layout].name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Panels</span>
-                <span className="text-white">{page.panels.length} / {slots.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Reading</span>
-                <span className="text-white">{page.readingDir === 'ltr' ? 'Left → Right' : 'Right ← Left'}</span>
-              </div>
-            </div>
-
-            <div className="bg-purple-900/20 border border-purple-800 rounded-lg p-3 text-xs text-purple-300">
-              💡 Drag panels from the library onto page slots, or drag slots to swap panels.
-            </div>
-
-            <button
-              onClick={() => {
-                const config = { projectId, pages };
-                const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = 'manga-layout.json'; a.click();
-              }}
-              className="w-full py-2 bg-purple-700 hover:bg-purple-600 text-white text-sm rounded-lg font-bold transition"
-            >
-              Export Layout JSON
-            </button>
-
-            <button
-              onClick={() => alert('PDF export coming soon! Your panel layout will be compiled into a comic-book ready PDF.')}
-              className="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition"
-            >
-              Export as PDF 📄
-            </button>
+          <div className="p-6 text-center text-gray-500 text-sm mt-10">
+            Select a panel or page to inspect its properties.
           </div>
         )}
+
+        {/* Global Export Footer */}
+        <div className="mt-auto p-6 border-t border-white/5 bg-black/20">
+          <button className="w-full py-3 bg-white text-black hover:bg-gray-200 text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2">
+            <Download className="w-4 h-4" /> Export Comic to PDF
+          </button>
+        </div>
       </aside>
     </div>
   );
