@@ -57,3 +57,36 @@ export async function uploadReference(formData: FormData) {
     throw new Error(`Upload failed: ${error.message}`);
   }
 }
+
+// NEW FUNCTION: Used by BatchUploadModal.tsx
+export async function saveReferenceMetadata(
+  fileUrl: string,
+  originalName: string,
+  mimeType: string,
+  name: string,
+  category: string
+) {
+  const { userId } = await auth();
+  if (!userId) throw new Error('Not authenticated');
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+
+  const { data: dbData, error: dbError } = await supabase
+    .from('references')
+    .insert({
+      user_id: userId,
+      name: name,
+      category: category || 'Character',
+      image_url: fileUrl,
+    })
+    .select()
+    .single();
+
+  if (dbError) throw new Error(`Database error: ${dbError.message}`);
+
+  return dbData;
+}
