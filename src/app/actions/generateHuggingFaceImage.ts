@@ -75,10 +75,11 @@ export async function generateHuggingFaceImage({
     const base64Image = Buffer.from(imageBuffer).toString('base64');
 
     // Deduct credits
+    const newCredits = user.credits - CREDIT_COST;
     const { error: updateError } = await supabase
       .from('users')
       .update({
-        credits: supabase.raw('credits - ?', [CREDIT_COST]),
+        credits: newCredits,
       })
       .eq('id', userId);
 
@@ -95,7 +96,7 @@ export async function generateHuggingFaceImage({
     return {
       success: true,
       imageBase64: base64Image,
-      creditsRemaining: user.credits - CREDIT_COST,
+      creditsRemaining: newCredits,
       prompt,
       model,
     };
