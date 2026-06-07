@@ -25,7 +25,7 @@ interface StoryboardRequest {
 }
 
 export async function generateStoryboard(request: StoryboardRequest) {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     throw new Error('Unauthorized: must be logged in');
@@ -104,7 +104,7 @@ export async function tagSceneReferences(
   sceneId: string,
   tags: SceneReferenceTag[]
 ) {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     throw new Error('Unauthorized: must be logged in');
