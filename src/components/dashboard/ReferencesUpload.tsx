@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { addReference } from '@/app/actions/addReference';
 
 interface Reference {
   id: string;
@@ -12,7 +13,13 @@ interface Reference {
   created_at: string;
 }
 
-export default function ReferencesUpload({ userId }: { userId: string }) {
+export default function ReferencesUpload({ 
+  userId, 
+  projectId = 'default' 
+}: { 
+  userId: string;
+  projectId?: string;
+}) {
   const [references, setReferences] = useState<Reference[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -91,19 +98,37 @@ export default function ReferencesUpload({ userId }: { userId: string }) {
             throw uploadError;
           }
 
-          console.log(`✓ Successfully uploaded ${file.name}`);
+          console.log(`✓ Successfully uploaded ${file.name} to storage`);
 
-          // Add to references list (in real app, save to DB)
-          const newRef: Reference = {
-            id: Math.random().toString(),
-            file_name: file.name,
-            file_type: file.type,
-            file_size: file.size,
-            storage_path: fileName,
-            created_at: new Date().toISOString(),
-          };
+          // Now save to database using server action
+          try {
+            const dbRecord = await addReference(
+              projectId,
+              file.name,
+              file.type,
+              file.size,
+              fileName
+            );
 
-          setReferences(prev => [newRef, ...prev]);
+            console.log(`✓ Successfully saved ${file.name} to database`);
+
+            const newRef: Reference = {
+              id: dbRecord.id || Math.random().toString(),
+              file_name: file.name,
+              file_type: file.type,
+              file_size: file.size,
+              storage_path: fileName,
+              created_at: new Date().toISOString(),
+            };
+
+            setReferences(prev => [newRef, ...prev]);
+          } catch (dbErr) {
+            // File was uploaded to storage but DB save failed
+            // Delete it from storage and notify user
+            await supabase.storage.from('references').remove([fileName]);
+            const dbErrorMsg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+            throw new Error(`Database save failed: ${dbErrorMsg}`);
+          }
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err);
           console.error(`Failed to upload ${file.name}:`, errorMsg);
