@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { uploadReference } from '@/app/actions/uploadReference';
+import { useUser } from '@clerk/nextjs';
+import { createClient } from '@supabase/supabase-js';
+import { saveReferenceMetadata } from '@/app/actions/uploadReference';
 
 interface FileWithMetadata {
   file: File;
@@ -28,6 +30,7 @@ export default function BatchUploadModal({
   onClose,
   onSuccess,
 }: BatchUploadModalProps) {
+  const { user } = useUser();
   const [items, setItems] = useState<FileWithMetadata[]>(
     files.map(file => ({
       file,
@@ -57,20 +60,57 @@ export default function BatchUploadModal({
     setIsUploading(true);
     const uploaded = [];
 
+    if (!user?.id) {
+      setError('User not authenticated');
+      setIsUploading(false);
+      return;
+    }
+
     try {
+      // Initialize Supabase client (uses anon key for browser upload)
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
       for (const item of items) {
         try {
-          const formData = new FormData();
-          formData.append('file', item.file);
+          console.log(`[BatchUpload] Uploading ${item.file.name} (${item.file.size} bytes)`);
 
-          const record = await uploadReference(formData, item.name, item.category);
-          uploaded.push(record);
-        } catch (err) {
-          setError(
-            `Failed to upload "${item.name}": ${
-              err instanceof Error ? err.message : String(err)
-            }`
+          // Upload file directly to Supabase Storage from browser
+          const storagePath = `${user.id}/${Date.now()}-${item.file.name}`;
+          const { error: uploadError, data } = await supabase.storage
+            .from('references')
+            .upload(storagePath, item.file, { 
+              contentType: item.file.type,
+              upsert: false 
+            });
+
+          if (uploadError) {
+            throw new Error(`Storage upload failed: ${uploadError.message}`);
+          }
+
+          console.log(`[BatchUpload] Storage upload successful:`, storagePath);
+
+          // Get public URL
+          const { data: urlData } = supabase.storage.from('references').getPublicUrl(storagePath);
+          const fileUrl = urlData?.publicUrl ?? '';
+
+          // Save metadata to database via Server Action
+          console.log(`[BatchUpload] Saving metadata via Server Action`);
+          const record = await saveReferenceMetadata(
+            fileUrl,
+            item.file.name,
+            item.file.type,
+            item.name,
+            item.category
           );
+          uploaded.push(record);
+          console.log(`[BatchUpload] Success for ${item.name}`);
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          setError(`Failed to upload "${item.name}": ${errMsg}`);
+          console.error(`[BatchUpload] Error for ${item.name}:`, err);
           // Continue with other files
         }
       }

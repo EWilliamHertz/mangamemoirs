@@ -10,6 +10,63 @@ function mimeToRefType(mime: string): 'pdf' | 'text' | 'image' | 'video' {
   return 'text';
 }
 
+/**
+ * Save reference metadata to database.
+ * File must be uploaded directly from browser to Supabase Storage first.
+ * This avoids Vercel's 4.5MB serverless function payload limit.
+ */
+export async function saveReferenceMetadata(
+  fileUrl: string,
+  fileName: string,
+  mimeType: string,
+  name?: string,
+  category?: string
+) {
+  try {
+    const { userId } = await auth();
+    if (!userId) throw new Error('Unauthorized: must be logged in');
+
+    console.log(`[saveReferenceMetadata] Creating DB record for: ${fileName}, userId: ${userId}`);
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    // Insert into references table
+    const insertPayload = {
+      user_id: userId,
+      name: name || fileName,
+      type: mimeToRefType(mimeType),
+      category: category || 'object',
+      file_url: fileUrl,
+    };
+    console.log(`[saveReferenceMetadata] Inserting into references table:`, insertPayload);
+
+    const { data, error } = await supabase
+      .from('references')
+      .insert(insertPayload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(`[saveReferenceMetadata] Database insert error:`, error);
+      throw new Error(`Database save failed: ${error.message}`);
+    }
+
+    console.log(`[saveReferenceMetadata] Success:`, data);
+    return data;
+  } catch (err) {
+    console.error('[saveReferenceMetadata] Fatal error:', err);
+    throw err;
+  }
+}
+
+/**
+ * @deprecated Use saveReferenceMetadata instead (browser uploads to storage directly)
+ * Kept for backward compatibility during migration
+ */
 export async function uploadReference(
   formData: FormData,
   name?: string,
