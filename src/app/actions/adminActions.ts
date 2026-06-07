@@ -103,12 +103,21 @@ export async function redeemVoucher(code: string) {
     throw new Error('You already redeemed this voucher');
   }
 
+  // Get current credits
+  const { data: user, error: fetchError } = await supabase
+    .from('users')
+    .select('credits, total_credits_earned')
+    .eq('id', userId)
+    .single();
+
+  if (fetchError || !user) throw new Error('User not found');
+
   // Add credits
   const { error: updateError } = await supabase
     .from('users')
     .update({
-      credits: supabase.raw('credits + ?', [voucher.credits]),
-      total_credits_earned: supabase.raw('total_credits_earned + ?', [voucher.credits]),
+      credits: (user.credits || 0) + voucher.credits,
+      total_credits_earned: (user.total_credits_earned || 0) + voucher.credits,
     })
     .eq('id', userId);
 
@@ -140,12 +149,21 @@ export async function topUpUserCredits(userId: string, amount: number, reason: s
   const admin = await isAdmin(adminId);
   if (!admin) throw new Error('Admin access required');
 
+  // Get current credits
+  const { data: user, error: fetchError } = await supabase
+    .from('users')
+    .select('credits, total_credits_earned')
+    .eq('id', userId)
+    .single();
+
+  if (fetchError || !user) throw new Error('User not found');
+
   // Add credits
   const { error: updateError } = await supabase
     .from('users')
     .update({
-      credits: supabase.raw('credits + ?', [amount]),
-      total_credits_earned: supabase.raw('total_credits_earned + ?', [amount]),
+      credits: (user.credits || 0) + amount,
+      total_credits_earned: (user.total_credits_earned || 0) + amount,
     })
     .eq('id', userId);
 

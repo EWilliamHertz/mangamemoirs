@@ -9,8 +9,10 @@ const nextConfig = {
     ],
   },
   serverExternalPackages: ['pdf-parse', 'svix'],
-  serverActions: {
-    bodySizeLimit: '50mb', // allow large image/video uploads
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb', // allow large image/video uploads
+    },
   },
 };
 
