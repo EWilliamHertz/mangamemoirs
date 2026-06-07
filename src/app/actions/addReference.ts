@@ -10,7 +10,7 @@ export async function addReference(
   fileSize: number,
   storagePath: string
 ) {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     throw new Error('Unauthorized: must be logged in');
