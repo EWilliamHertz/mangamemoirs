@@ -6,6 +6,7 @@ import Replicate from 'replicate';
 
 export interface AnimeClipInput {
   prompt: string;
+  motion?:number;
   duration?: number; // 1-15 seconds, or -1 for intelligent
   resolution?: '480p' | '720p' | '1080p';
   aspectRatio?: '16:9' | '9:16' | '1:1' | '4:3' | '3:4' | '21:9' | 'adaptive';
