@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
-import ReferencesUpload from '@/components/dashboard/ReferencesUpload';
+import DashboardTabs from '@/components/dashboard/DashboardTabs';
 
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
@@ -43,20 +43,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* References Section */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-2xl overflow-hidden">
-          <ReferencesUpload userId={user?.id || ''} />
-        </div>
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
-          <button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-lg">
-            + Create New Project
-          </button>
-          <button className="bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-lg border border-gray-600">
-            📧 Request More Credits
-          </button>
-        </div>
+        {/* Dashboard Tabs */}
+        <DashboardTabs userId={user?.id || ''} />
       </div>
     </div>
   );
