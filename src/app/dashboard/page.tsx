@@ -21,14 +21,19 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
       <div className="max-w-7xl mx-auto px-6 py-12">
         {/* Header */}
-        <div className="mb-12">
-          <div className="mb-2">
-            <span className="inline-block text-sm font-bold tracking-widest text-purple-400 bg-purple-600/10 border border-purple-600/20 px-3 py-1.5 rounded-full mb-4">
-              WELCOME BACK
-            </span>
+        <div className="mb-12 flex items-start justify-between">
+          <div className="flex-1">
+            <div className="mb-2">
+              <span className="inline-block text-sm font-bold tracking-widest text-purple-400 bg-purple-600/10 border border-purple-600/20 px-3 py-1.5 rounded-full mb-4">
+                WELCOME BACK
+              </span>
+            </div>
+            <h1 className="text-5xl font-black text-white mb-3">Welcome, {firstName}</h1>
+            <p className="text-gray-400 text-lg">Build stunning manga and anime from your stories</p>
           </div>
-          <h1 className="text-5xl font-black text-white mb-3">Welcome, {firstName}</h1>
-          <p className="text-gray-400 text-lg">Build stunning manga and anime from your stories</p>
+          <a href="/dashboard/credits" className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-lg transition-colors">
+            💳 Credits
+          </a>
         </div>
 
         {/* Credits Status */}

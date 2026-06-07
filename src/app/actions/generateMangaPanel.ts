@@ -86,6 +86,14 @@ export async function generateMangaPanel(input: MangaPanelInput): Promise<MangaP
     .select('credits')
     .single();
 
+  // Log transaction
+  await supabase.from('credit_transactions').insert({
+    user_id: userId,
+    amount: -3,
+    type: 'generation',
+    description: `Manga panel generation: ${input.prompt.substring(0, 50)}...`,
+  });
+
   return {
     imageUrl,
     creditsUsed: 3,

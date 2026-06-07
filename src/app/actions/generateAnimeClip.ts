@@ -104,9 +104,18 @@ export async function generateAnimeClip(input: AnimeClipInput): Promise<AnimeCli
     .select('credits')
     .single();
 
+  // Log transaction
+  const actualDuration = duration === -1 ? 10 : duration;
+  await supabase.from('credit_transactions').insert({
+    user_id: userId,
+    amount: -creditsNeeded,
+    type: 'generation',
+    description: `Anime clip generation (${actualDuration}s): ${input.prompt.substring(0, 50)}...`,
+  });
+
   return {
     videoUrl,
-    duration: duration === -1 ? 10 : duration,
+    duration: actualDuration,
     creditsUsed: creditsNeeded,
     remainingCredits: updated?.credits ?? user.credits - creditsNeeded,
   };
