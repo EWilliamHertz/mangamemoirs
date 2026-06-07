@@ -58,11 +58,7 @@ export default function DashboardTabs({ userId }: { userId: string }) {
         )}
 
         {activeTab === 'storyboard' && (
-          <StoryboardBuilder
-            userId={userId}
-            projectId="default"
-            uploadedReferences={uploadedReferences}
-          />
+          <StoryboardBuilder projectId="default" />
         )}
 
         {activeTab === 'generate' && (
