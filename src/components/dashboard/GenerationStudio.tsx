@@ -21,7 +21,7 @@ export default function GenerationStudio({ initialCredits }: GenerationStudioPro
   const [prompt, setPrompt] = useState('');
   const [isColored, setIsColored] = useState(false);
   const [aspectRatio, setAspectRatio] = useState('portrait');
-  const [provider, setProvider] = useState<'hf' | 'banana'>('hf');
+  const [provider, setProvider] = useState<'replicate' | 'banana'>('replicate');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPanels, setGeneratedPanels] = useState<string[]>([]);
   const [credits, setCredits] = useState(initialCredits);
@@ -89,7 +89,7 @@ export default function GenerationStudio({ initialCredits }: GenerationStudioPro
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     
-    const cost = provider === 'banana' ? 3 : 1;
+    const cost = 3; // Manga panel always costs 3 credits
     if (credits < cost) {
       alert(`You need ${cost} credits to generate using ${provider.toUpperCase()}.`);
       return;
@@ -284,8 +284,8 @@ export default function GenerationStudio({ initialCredits }: GenerationStudioPro
             {/* Engine Toggle Row */}
             <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5">
               <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Engine:</span>
-              <button onClick={() => setProvider('hf')} className={`text-xs px-2 py-1 rounded transition-all ${provider === 'hf' ? 'bg-white/10 text-white font-medium' : 'text-gray-500 hover:text-gray-300'}`}>
-                Standard HF (1 Cr)
+              <button onClick={() => setProvider('replicate')} className={`text-xs px-2 py-1 rounded transition-all ${provider === 'replicate' ? 'bg-white/10 text-white font-medium' : 'text-gray-500 hover:text-gray-300'}`}>
+                Stable Diffusion 3.5 (3 Cr)
               </button>
               <button onClick={() => setProvider('banana')} className={`text-xs px-2 py-1 rounded transition-all flex items-center gap-1 ${provider === 'banana' ? 'bg-plasma/20 text-plasma font-medium border border-plasma/30' : 'text-gray-500 hover:text-gray-300'}`}>
                 Premium Banana (3 Cr)

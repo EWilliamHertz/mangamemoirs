@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles, Clapperboard, BookOpen, Settings, LayoutTemplate, Users, Globe, Wand2 } from 'lucide-react';
+import { Sparkles, Clapperboard, BookOpen, Settings, LayoutTemplate, Users, Globe, Wand2, FileText } from 'lucide-react';
 
 export default function GlobalSidebar() {
   const pathname = usePathname();
@@ -11,10 +11,12 @@ export default function GlobalSidebar() {
 
   const navItems = [
     { href: '/dashboard', icon: Sparkles, label: 'Manga Studio' },
+    { href: '/dashboard/pdf-to-manga', icon: FileText, label: 'PDF to Manga' },
     { href: '/dashboard/manga-editor', icon: LayoutTemplate, label: 'Manga Compiler' },
     { href: '/dashboard/anime-creator', icon: Wand2, label: 'Anime Creator' },
     { href: '/dashboard/anime-editor', icon: Clapperboard, label: 'Anime Editor' },
     { href: '/dashboard/references', icon: Users, label: 'References' },
+    { href: '/dashboard/teams', icon: Users, label: 'Teams' },
     { href: '/dashboard/community', icon: Globe, label: 'Community' },
     { href: '/dashboard/library', icon: BookOpen, label: 'Library' },
   ];

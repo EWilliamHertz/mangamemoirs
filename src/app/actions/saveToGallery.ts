@@ -2,6 +2,7 @@
 
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
+import { clerkClient } from '@clerk/nextjs/server';
 
 export interface GalleryItem {
   title: string;
@@ -125,18 +126,20 @@ export async function shareGalleryToCommunity(
       throw new Error('Gallery item not found');
     }
 
+    // Get user's display name from Clerk
+    const clerk = await clerkClient();
+    const clerkUser = await clerk.users.getUser(userId);
+    const userName = clerkUser?.username || clerkUser?.firstName || 'Creator';
+
     // Create community post
     const { data: communityPost, error: postError } = await supabase
       .from('community_posts')
       .insert({
         user_id: userId,
-        author_name: 'Creator',
-        content_type: galleryItem.media_type === 'manga-panel' 
-          ? 'manga-pictures' 
-          : 'anime-shorts',
+        title: caption || galleryItem.title,
+        description: caption || galleryItem.description,
         media_url: galleryItem.media_url,
-        caption: caption,
-        likes_count: 0,
+        media_type: galleryItem.media_type,
       })
       .select()
       .single();
