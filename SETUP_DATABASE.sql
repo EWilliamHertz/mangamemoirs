@@ -1,5 +1,5 @@
 -- =====================================================
--- OURIYE PLATFORM — Complete Supabase Schema
+-- OURIYE PLATFORM — Complete Supabase Schema (FIXED)
 -- Run this in your Supabase SQL Editor
 -- =====================================================
 
@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- =====================================================
--- REFERENCES (PDFs, images, videos, text)
+-- REFERENCES (PDFs, images, videos, text) — quoted as reserved keyword
 -- =====================================================
-CREATE TABLE IF NOT EXISTS references (
+CREATE TABLE IF NOT EXISTS "references" (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
 -- ROW LEVEL SECURITY (RLS)
 -- =====================================================
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE references ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "references" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
@@ -186,13 +186,13 @@ CREATE POLICY "public_can_view_usernames" ON users FOR SELECT
   USING (true);
 
 -- ── References ────────────────────────────────────
-CREATE POLICY "users_can_view_own_references" ON references FOR SELECT
+CREATE POLICY "users_can_view_own_references" ON "references" FOR SELECT
   USING (user_id = auth.uid()::text);
 
-CREATE POLICY "users_can_insert_own_references" ON references FOR INSERT
+CREATE POLICY "users_can_insert_own_references" ON "references" FOR INSERT
   WITH CHECK (user_id = auth.uid()::text);
 
-CREATE POLICY "users_can_delete_own_references" ON references FOR DELETE
+CREATE POLICY "users_can_delete_own_references" ON "references" FOR DELETE
   USING (user_id = auth.uid()::text);
 
 -- ── Teams ────────────────────────────────────────
@@ -320,8 +320,8 @@ CREATE POLICY "Allow users to delete own media files" ON storage.objects
 -- =====================================================
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-CREATE INDEX IF NOT EXISTS idx_references_user ON references(user_id);
-CREATE INDEX IF NOT EXISTS idx_references_type ON references(type);
+CREATE INDEX IF NOT EXISTS idx_references_user ON "references"(user_id);
+CREATE INDEX IF NOT EXISTS idx_references_type ON "references"(type);
 CREATE INDEX IF NOT EXISTS idx_teams_owner ON teams(owner_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_team ON team_members(team_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
@@ -338,3 +338,11 @@ CREATE INDEX IF NOT EXISTS idx_community_created ON community_posts(created_at D
 CREATE INDEX IF NOT EXISTS idx_transactions_user ON credit_transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_created ON credit_transactions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_vouchers_code ON vouchers(code);
+
+-- =====================================================
+-- SAMPLE DATA (for testing)
+-- =====================================================
+-- Insert sample user (replace with your Clerk ID)
+-- INSERT INTO users (id, email, username, credits)
+-- VALUES ('user_YOUR_CLERK_ID', 'you@example.com', 'yourname', 8)
+-- ON CONFLICT DO NOTHING;
