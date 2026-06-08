@@ -2,19 +2,21 @@
 
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
-import { HfInference } from '@huggingface/inference';
+import Replicate from 'replicate';
+import { saveToGallery } from './saveToGallery';
 
 // Define the input interface
 export interface MangaPanelInput {
   prompt: string;
   isColored?: boolean;
   aspectRatio?: 'portrait' | 'landscape' | 'square' | string;
-  provider?: 'hf' | 'banana';
+  provider?: 'replicate' | 'banana';
   referenceImageUrls?: string[];
 }
 
-// Initialize with the token explicitly
-const hf = new HfInference(process.env.HUGGINGFACE_API_KEY as string);
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN,
+});
 
 export async function generateMangaPanel(input: MangaPanelInput) {
   const { userId } = await auth();
@@ -26,68 +28,95 @@ export async function generateMangaPanel(input: MangaPanelInput) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  // 1. Credit Logic
-  const cost = input.provider === 'banana' ? 3 : 1;
-  const { data: user, error: userErr } = await supabase.from('users').select('credits').eq('id', userId).single();
-  
-  if (userErr || !user) throw new Error('User not found');
-  if (user.credits < cost) throw new Error(`Insufficient credits (Need ${cost})`);
-
-  // 2. Prompt Construction
-  const style = input.isColored 
-    ? "vibrant full color manga, high quality anime key visual, masterpiece" 
-    : "black and white manga panel, high contrast ink, screentone, seinen manga, masterpiece";
-  const fullPrompt = `${input.prompt}, ${style}`;
-
   try {
+    // 1. Get user & check credits
+    const { data: user, error: userErr } = await supabase
+      .from('users')
+      .select('credits')
+      .eq('id', userId)
+      .single();
+    
+    if (userErr || !user) throw new Error('User not found');
+    
+    const cost = input.provider === 'banana' ? 3 : 3; // Replicate costs 3 credits
+    if (user.credits < cost) {
+      throw new Error(`Insufficient credits (Need ${cost}, Have ${user.credits})`);
+    }
+
+    // 2. Build prompt with style
+    const style = input.isColored 
+      ? "vibrant full color manga, high quality anime key visual, masterpiece, beautiful composition"
+      : "black and white manga panel, high contrast ink, screentone art, professional manga, masterpiece";
+    
+    const fullPrompt = `${input.prompt}, ${style}`;
+
+    // 3. Generate with Replicate (using Stable Diffusion 3 for best anime/manga quality)
     let imageUrl = '';
 
     if (input.provider === 'banana') {
-      throw new Error("Banana provider configuration required.");
+      throw new Error('Banana provider not yet configured');
     } else {
-      // 3. Fix: Call the model with explicit token auth via the SDK
-      const response = await hf.textToImage({
-        model: 'stabilityai/stable-diffusion-3.5-large',
-        inputs: fullPrompt,
-        parameters: { 
-          negative_prompt: 'blurry, low quality, distorted, ugly',
-          num_inference_steps: 25
+      // Use Stable Diffusion 3 via Replicate
+      const output = await replicate.run(
+        'stability-ai/stable-diffusion-3.5-large:5f61fcc91b7f11d29b4e675228e1489bb16eacbe8fa71b99dbccc302e8d5e5ee',
+        {
+          input: {
+            prompt: fullPrompt,
+            negative_prompt: 'blurry, low quality, distorted, ugly, nsfw',
+            num_inference_steps: 28,
+            guidance_scale: 7.5,
+          },
         }
-      });
+      ) as string[];
 
-      // 4. Save to Storage
-      const buffer = Buffer.from(await (response as any).arrayBuffer());
-      const fileName = `${userId}/panel_${Date.now()}.png`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('references')
-        .upload(fileName, buffer, { contentType: 'image/png' });
-        
-      if (uploadError) throw uploadError;
+      if (!output || !Array.isArray(output) || output.length === 0) {
+        throw new Error('No image generated from Replicate');
+      }
 
-      const { data } = supabase.storage.from('references').getPublicUrl(fileName);
-      imageUrl = data.publicUrl;
+      imageUrl = output[0];
     }
 
-    // 5. Automatically save to Library (Community Feed)
-    await supabase.from('community_posts').insert({
-      user_id: userId,
-      author_name: 'Creator',
-      content_type: 'manga-pictures',
+    // 4. Save to user's gallery
+    const galleryResult = await saveToGallery({
+      title: `Manga Panel - ${new Date().toLocaleDateString()}`,
+      description: input.prompt,
       media_url: imageUrl,
-      caption: input.prompt
+      media_type: 'manga-panel',
+      prompt: input.prompt,
+      aspect_ratio: input.aspectRatio || 'portrait',
+      is_colored: input.isColored || false,
+      generated_model: input.provider === 'banana' ? 'banana-pro' : 'stable-diffusion-3.5',
+      credits_used: cost,
     });
 
-    // 6. Deduct Credits
-    await supabase.from('users').update({ credits: user.credits - cost }).eq('id', userId);
-    
-    return { 
-      imageUrl, 
-      creditsUsed: cost, 
-      remainingCredits: user.credits - cost 
+    // 5. Deduct credits from user
+    const { error: deductError } = await supabase
+      .from('users')
+      .update({ credits: user.credits - cost })
+      .eq('id', userId);
+
+    if (deductError) {
+      console.error('Credit deduction failed:', deductError);
+      // Don't throw - image was generated, just log the error
+    }
+
+    // 6. Record transaction
+    await supabase.from('credit_transactions').insert({
+      user_id: userId,
+      amount: -cost,
+      type: 'manga_generation',
+      description: 'Generated manga panel',
+      reference_id: galleryResult.success ? galleryResult.galleryId : undefined,
+    });
+
+    return {
+      imageUrl,
+      creditsUsed: cost,
+      remainingCredits: user.credits - cost,
+      galleryId: galleryResult.success ? galleryResult.galleryId : null,
     };
   } catch (err: any) {
-    console.error("Generation Error Details:", err);
-    throw new Error(err.message || "Failed to generate");
+    console.error('Manga generation error:', err);
+    throw new Error(err.message || 'Failed to generate manga panel');
   }
 }

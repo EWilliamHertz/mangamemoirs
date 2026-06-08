@@ -3,6 +3,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 import Replicate from 'replicate';
+import { saveToGallery } from './saveToGallery';
 
 export interface AnimeClipInput {
   prompt: string;
@@ -97,6 +98,19 @@ export async function generateAnimeClip(input: AnimeClipInput): Promise<AnimeCli
     ? (output as { url: () => string }).url()
     : String(output);
 
+  const actualDuration = duration === -1 ? 10 : duration;
+
+  // Save to user's gallery
+  const galleryResult = await saveToGallery({
+    title: `Anime Clip ${actualDuration}s - ${new Date().toLocaleDateString()}`,
+    description: input.prompt,
+    media_url: videoUrl,
+    media_type: 'anime-clip',
+    prompt: input.prompt,
+    generated_model: 'seedance-2.0',
+    credits_used: creditsNeeded,
+  });
+
   // Deduct credits
   const { data: updated } = await supabase
     .from('users')
@@ -106,12 +120,12 @@ export async function generateAnimeClip(input: AnimeClipInput): Promise<AnimeCli
     .single();
 
   // Log transaction
-  const actualDuration = duration === -1 ? 10 : duration;
   await supabase.from('credit_transactions').insert({
     user_id: userId,
     amount: -creditsNeeded,
-    type: 'generation',
+    type: 'anime_generation',
     description: `Anime clip generation (${actualDuration}s): ${input.prompt.substring(0, 50)}...`,
+    reference_id: galleryResult.success ? galleryResult.galleryId : undefined,
   });
 
   return {
@@ -119,5 +133,6 @@ export async function generateAnimeClip(input: AnimeClipInput): Promise<AnimeCli
     duration: actualDuration,
     creditsUsed: creditsNeeded,
     remainingCredits: updated?.credits ?? user.credits - creditsNeeded,
+    galleryId: galleryResult.success ? galleryResult.galleryId : null,
   };
 }
