@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS scenes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
   index INTEGER NOT NULL,
   title TEXT,
   description TEXT,
@@ -97,6 +98,7 @@ CREATE TABLE IF NOT EXISTS scenes (
 CREATE TABLE IF NOT EXISTS user_gallery (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
   title TEXT NOT NULL,
   description TEXT,
   media_url TEXT NOT NULL,
@@ -118,6 +120,7 @@ CREATE TABLE IF NOT EXISTS user_gallery (
 CREATE TABLE IF NOT EXISTS community_posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
   gallery_id UUID REFERENCES user_gallery(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT,
@@ -329,11 +332,14 @@ CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);
 CREATE INDEX IF NOT EXISTS idx_projects_team ON projects(team_id);
 CREATE INDEX IF NOT EXISTS idx_scenes_project ON scenes(project_id);
 CREATE INDEX IF NOT EXISTS idx_scenes_user ON scenes(user_id);
+CREATE INDEX IF NOT EXISTS idx_scenes_team ON scenes(team_id);
 CREATE INDEX IF NOT EXISTS idx_gallery_user ON user_gallery(user_id);
+CREATE INDEX IF NOT EXISTS idx_gallery_team ON user_gallery(team_id);
 CREATE INDEX IF NOT EXISTS idx_gallery_created ON user_gallery(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_gallery_shared ON user_gallery(is_shared);
 CREATE INDEX IF NOT EXISTS idx_gallery_media_type ON user_gallery(media_type);
 CREATE INDEX IF NOT EXISTS idx_community_user ON community_posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_community_team ON community_posts(team_id);
 CREATE INDEX IF NOT EXISTS idx_community_created ON community_posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_transactions_user ON credit_transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_created ON credit_transactions(created_at DESC);
